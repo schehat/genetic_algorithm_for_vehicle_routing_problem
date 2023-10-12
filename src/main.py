@@ -5,6 +5,8 @@ from timeit import default_timer as timer
 import numpy as np
 
 from crossover import Crossover
+from customer import Customer
+from depot import Depot
 from FISAGALS import FISAGALS
 from fitness_scaling import FitnessScaling
 from mutation import Mutation
@@ -19,44 +21,32 @@ def read_cordeau_instance(file_path):
     header = lines[0].split()
     n_vehicles, n_customers, n_depots = map(int, header[1:4])
     max_capacity = lines[1].split()[1]
-    vrp_instance = VRPInstance(n_vehicles, n_customers, n_depots, max_capacity)
     
-    # Initialize NumPy arrays to store customer and depot data
-    customer_dtype = np.dtype([
-        ('id', int),
-        ('x', float),
-        ('y', float),
-        ('demand', int),
-    ])
-    customers = np.zeros((n_customers,), dtype=customer_dtype)
+    customers = np.zeros((n_customers,), dtype=Customer)
+    depots = np.zeros((n_depots,), dtype=Depot)
 
-    depot_dtype = np.dtype([
-        ('id', int),
-        ('x', float),
-        ('y', float),
-    ])
-    depots = np.zeros((n_depots,), dtype=depot_dtype)
-
-    # Read customer data
-    for i, line in enumerate(lines[n_vehicles+1:n_vehicles+1 + n_customers]):
+     # Read customer data
+    for i, line in enumerate(lines[n_vehicles + 1 : n_vehicles + 1 + n_customers]):
         data = line.split()
         if len(data) >= 5:
-            customers[i]['id'] = int(data[0])
-            customers[i]['x'] = float(data[1])
-            customers[i]['y'] = float(data[2])
-            customers[i]['demand'] = int(data[4])
+            customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[4]))
+            customers[i] = customer
 
     # Read depot data
-    for i, line in enumerate(lines[n_vehicles+1 + n_customers:]):
+    for i, line in enumerate(lines[n_vehicles + 1 + n_customers :]):
         data = line.split()
         if len(data) >= 3:
-            depots[i]['id'] = int(data[0])
-            depots[i]['x'] = float(data[1])
-            depots[i]['y'] = float(data[2])
+            # depot id is + n_customers offset, unfavorable in later stages of GA  
+            depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]))
+            depots[i] = depot
+
+    vrp_instance = VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots)
   
-    return vrp_instance, customers, depots
+    return vrp_instance
 
 if __name__ == "__main__":
+    np.set_printoptions(threshold=np.inf)
+    # TEST MUTATION AND CROSSOVER
     # mutation_rate = 1.0
     # crossover_rate = 1.0
     # vrp_instance = VRPInstance(4, 12, 2, 80)
@@ -77,8 +67,35 @@ if __name__ == "__main__":
 
     # Define parameters
     instance_file_path = "../benchmark/C-mdvrp/p01"        
-    # vrp_instance, customers, depots = read_cordeau_instance(instance_file_path)
-    vrp_instance = VRPInstance(4, 12, 2, 80)
+    # vrp_instance = read_cordeau_instance(instance_file_path)
+
+    # TESTING WITHOUT BENCHMARK
+    n_customers = 12
+    n_depots = 2
+    customers = np.zeros((n_customers,), dtype=Customer)
+    depots = np.zeros((n_depots,), dtype=Depot)
+    for i in range(12):
+        customer = Customer(i+1, i*10, i*5, i*10)
+        customers[i] = customer
+    for i in range(2):
+        depot = Depot(i+1, 10**(i+1), 50*i)
+        depots[i] = depot
+    vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots)
+    
+    # print("Customer Data:")
+    # for customer in vrp_instance.customers:
+    #     print(f"Customer {customer.id}")
+    #     print(f"  X-coordinate: {customer.x}")
+    #     print(f"  Y-coordinate: {customer.y}")
+    #     print(f"  Demand: {customer.demand}")
+
+    # # Print depot data
+    # print("Depot Data:")
+    # for depot in vrp_instance.depots:
+    #     print(f"Depot {depot.id}")
+    #     print(f"  X-coordinate: {depot.x}")
+    #     print(f"  Y-coordinate: {depot.y}")
+
     population_size = 100
     crossover_rate = 0.8
     mutation_rate = 0.1

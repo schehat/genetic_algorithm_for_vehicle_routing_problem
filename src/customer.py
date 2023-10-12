@@ -1,8 +1,5 @@
-import math
-
-
 class Customer:
-    def __init__(self, id, x, y, demand):
+    def __init__(self, id: int, x: float, y: float, demand: int):
         self.id = id
         self.x = x
         self.y = y

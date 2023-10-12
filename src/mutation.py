@@ -9,7 +9,7 @@ class Mutation():
     adaptive_mutation_rate = 1 #TODO
 
     def __init__(self, vrp_instance: VRPInstance, mutation_rate: float):
-        self.vrp_instance = vrp_instance
+        self.vrp_instance: VRPInstance = vrp_instance
         self.START_SECOND_PART = vrp_instance.n_depots
         self.START_THIRD_PART = self.START_SECOND_PART + vrp_instance.n_vehicles
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
