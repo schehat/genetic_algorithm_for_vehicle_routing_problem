@@ -1,37 +1,43 @@
+from typing import Callable
+
 import numpy as np
 from numpy import ndarray
 
 from crossover import Crossover
 from customer import Customer
 from depot import Depot
-from fitness_scaling import FitnessScaling
 from mutation import Mutation
 from vrp_instance import VRPInstance
 
-"""
+
+class FISAGALS:
+    """
     - Fitness-scaling adaptive genetic algorithm with local search
-    - Chromosome representation specific integer string consisting of two parts:
+    - Chromosome representation specific integer string consisting of three parts:
         1. Number of vehicles for each depot
         1. Number of customers for each vehicle to serve
         2. The order of customers for each vehicle to serve
         E.g. for 2 depots with 3 vehicles and 7 customers (2, 1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 7)
         => first depot (index 0) has 2 vehicles, first vehicle (index 2) serves customer 1 and 2 (index 5 and 6)
         => second depot (Index 1) has 1 vehicles (index 2), serving customer 6 and 7 (index 10, 11)
-"""
+    """
 
-
-class FISAGALS:
     def __init__(self, vrp_instance: VRPInstance, population_size: int, crossover_rate: float, mutation_rate: float,
-                 max_generations: int, fitness_scaling):
+                 max_generations: int, fitness_scaling: Callable[[ndarray], ndarray], selection_method: Callable[[ndarray, ndarray, int], ndarray]):
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
-        self.crossover_rate = Crossover(self.vrp_instance, crossover_rate)
+        self.crossover = Crossover(self.vrp_instance, crossover_rate)
         self.mutation = Mutation(self.vrp_instance, mutation_rate)
         self.max_generations = max_generations
-        self.fitness_scaling: FitnessScaling = fitness_scaling
+        self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
+        self.selection_method: Callable[[ndarray, ndarray, int], ndarray] = selection_method
 
-    # Random initial population
     def generate_initial_population(self) -> ndarray:
+        """
+        Random initial population
+        return: 2D array with all chromosome in the population
+        """
+
         initial_population = []
         for _ in range(self.population_size):
             # Part 1: Number of vehicles for each depot
@@ -79,6 +85,12 @@ class FISAGALS:
         return np.array(initial_population, dtype=int)
 
     def evaluate_fitness(self, chromosome: ndarray) -> float:
+        """
+        Fitness evaluation of a single chromosome
+        param: chromosome 1D array
+        return: fitness value
+        """
+
         # fitness: total distance
         fitness = 0.0
         depot_index = 0
@@ -106,7 +118,8 @@ class FISAGALS:
 
                 # First iteration in loop: first trip 
                 if j == 0:
-                    # Add distance from depot to customer with the euclidean distance. Assuming single customer demand <= vehicle max capacity 
+                    # Add distance from depot to customer with the euclidean distance.
+                    # Assuming single customer demand <= vehicle max capacity
                     fitness += np.linalg.norm(
                         np.array([vehicle_i_depot.x, vehicle_i_depot.y]) - np.array([customer_1.x, customer_1.y]))
 
@@ -149,26 +162,36 @@ class FISAGALS:
         return fitness
 
     def run(self):
+        """
+        Execution of FISAGALS
+        """
+
         population = self.generate_initial_population()
 
         for generation in range(self.max_generations):
-            fitness_scores = np.array([(int(i), self.evaluate_fitness(chromosome)) for i, chromosome in enumerate(population)], dtype=np.dtype([('index', int), ('fitness', float)]))
+            # Fitness evaluation and scaling
+            fitness_scores = np.array([(int(i), self.evaluate_fitness(chromosome)) for i, chromosome in enumerate(population)],
+                                      dtype=np.dtype([('index', int), ('fitness', float)]))
             self.fitness_scaling(fitness_scores)
-        print(fitness_scores)
 
-        #     # Selection
-        #     selected_parents = self.selection(population, fitness_scores)
+            # Parent selection
+            selected_parents = self.selection_method(population, fitness_scores, 5)
 
-        #     # Crossover
-        #     children = []
-        #     for i in range(0, self.population_size, 2):
-        #         child1 = self.crossover(selected_parents[i], selected_parents[i + 1])
-        #         child2 = self.crossover(selected_parents[i + 1], selected_parents[i])
-        #         children.extend([child1, child2])
+            # Crossover
+            children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers), dtype=population.dtype)
+            for i in range(0, self.population_size, 2):
+                # Generate children, second child by swapping parents
+                children[i] = self.crossover.order(self.crossover.uniform(selected_parents[i], selected_parents[i + 1]), selected_parents[i + 1])
+                children[i + 1] = self.crossover.order(self.crossover.uniform(selected_parents[i + 1], selected_parents[i]), selected_parents[i])
 
-        #     # Mutation
-        #     for child in children:
-        #         self.mutation(child)
+            # Mutation TODO check if mutation works
+            for i in range(0, self.population_size):
+                children[i] = self.mutation.uniform(children[i])
+                children[i] = self.mutation.insertion(self.mutation.inversion(self.mutation.swap(children[i])))
+
+            # population = np.copy(children)
+
+        # print(selected_parents)
 
         #     # Replace old generation with new generation
         #     population = children
@@ -180,3 +203,4 @@ class FISAGALS:
         # # Return the best solution found
         # best_solution = min(population, key=self.evaluate_fitness)
         # return best_solution
+

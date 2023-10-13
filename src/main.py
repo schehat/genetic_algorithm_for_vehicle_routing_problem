@@ -7,7 +7,10 @@ from customer import Customer
 from depot import Depot
 from FISAGALS import FISAGALS
 from fitness_scaling import FitnessScaling
+from src.selection import Selection
 from vrp_instance import VRPInstance
+from mutation import Mutation
+from crossover import Crossover
 
 
 def read_cordeau_instance(file_path) -> VRPInstance:
@@ -44,25 +47,6 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
     # Set the print options to control the display format
 
-    # TEST MUTATION AND CROSSOVER
-    # mutation_rate = 1.0
-    # crossover_rate = 1.0
-    # vrp_instance = VRPInstance(4, 12, 2, 80)
-    # mutation = Mutation(vrp_instance, mutation_rate)
-    # crossover = Crossover(vrp_instance, crossover_rate)
-    # for i in range(100):
-    #     chromosome1 = np.array([3, 1, 2, 4, 3, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])      
-    #     chromosome2 = np.array([1, 3, 3, 3, 4, 2, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])      
-
-    #     start = timer()
-    #     # mutation.uniform(chromosome1)
-    #     crossover_new1 = crossover.order(chromosome1, chromosome2)
-    #     end = timer()
-
-    #     # print(end - start)
-    #     # print(f"{chromosome1}")
-    #     print(crossover_new1)
-
     # TESTING WITHOUT BENCHMARK
     n_customers = 12
     n_depots = 2
@@ -75,6 +59,22 @@ if __name__ == "__main__":
         depot = Depot(i+1, 10**(i+1), 50*i)
         depots[i] = depot
     vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots)
+
+    # TEST MUTATION AND CROSSOVER
+    # mutation_rate = 1.0
+    # crossover_rate = 1.0
+    # mutation = Mutation(vrp_instance, mutation_rate)
+    # crossover = Crossover(vrp_instance, crossover_rate)
+    # for i in range(100):
+    #     chromosome1 = np.array([3, 1, 2, 4, 3, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    #     chromosome2 = np.array([1, 3, 3, 3, 4, 2, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+    #
+    #     mutation.inversion(chromosome1)
+    #     # crossover_new1 = crossover.uniform(chromosome1, chromosome2)
+    #
+    #     # print(end - start)
+    #     print(f"{chromosome1}")
+    #     # print(crossover_new1)
 
     # print("Customer Data:")
     # for customer in vrp_instance.customers:
@@ -94,11 +94,18 @@ if __name__ == "__main__":
     # vrp_instance = read_cordeau_instance(instance_file_path)
 
     population_size = 50
-    crossover_rate = 0.8
+    crossover_rate = 1.0
     mutation_rate = 0.1
     max_generations = 100
     fitness_scaling = FitnessScaling.power_rank
+    selection_method = Selection.n_tournament
 
     # Run it GA
-    ga = FISAGALS(vrp_instance, population_size, crossover_rate, mutation_rate, max_generations, fitness_scaling)
+    ga = FISAGALS(vrp_instance,
+                  population_size,
+                  crossover_rate,
+                  mutation_rate,
+                  max_generations,
+                  fitness_scaling,
+                  selection_method)
     ga.run()

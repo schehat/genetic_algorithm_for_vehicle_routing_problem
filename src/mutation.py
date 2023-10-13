@@ -6,6 +6,11 @@ from vrp_instance import VRPInstance
 
 
 class Mutation:
+    """
+    Genetic operator to mutate genetic information of an individual to enhance the diversity of the population
+    and local search technique to find better results
+    """
+
     adaptive_mutation_rate = 1  # TODO
 
     def __init__(self, vrp_instance: VRPInstance, mutation_rate: float):
@@ -15,8 +20,12 @@ class Mutation:
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
         self.mutation_rate = mutation_rate
 
-    # first and second part of chromosome in place
     def uniform(self, chromosome: np.ndarray):
+        """
+        Applying to first and second part of chromosome in place
+        param: chromosome 1D array
+        """
+
         # Define the range for mutated numbers of vehicles
         min_vehicle = 0
         max_vehicle = self.vrp_instance.n_vehicles
@@ -39,10 +48,14 @@ class Mutation:
                 mutated_value = np.random.randint(min_customer, max_customer + 1)
                 chromosome[i] = mutated_value
 
-        self.repair_procedure(chromosome)
+        self._repair_procedure(chromosome)
 
-    # After uniform mutation first and second part of chromosome may break and repair procedure needed 
-    def repair_procedure(self, chromosome: np.ndarray):
+    def _repair_procedure(self, chromosome: np.ndarray):
+        """
+        After uniform mutation first and second part of chromosome may break and repair procedure needed
+        param: chromosome 1D array
+        """
+
         # iterate through depots
         sum_vehicles = np.sum(chromosome[:self.START_SECOND_PART])
         diff = sum_vehicles - self.vrp_instance.n_vehicles
@@ -75,33 +88,42 @@ class Mutation:
                 chromosome[random_index] += 1
                 diff += 1
 
-    # third part of chromosome in place
     def swap(self, chromosome: np.ndarray):
+        """
+        Applying to third part of chromosome in place
+        param: chromosome 1D array
+        """
+
         # Check if mutation should occur
         if random.random() <= self.mutation_rate:
             positions = self._generate_distinct_positions(2)
             pos1, pos2 = positions[0], positions[1]
 
-            # Perform swap in place
+            # Perform swap
             chromosome[pos1], chromosome[pos2] = chromosome[pos2], chromosome[pos1]
 
-    # third part of chromosome in place
     def inversion(self, chromosome: np.ndarray):
-        # Check if mutation should occur
+        """
+        Applying to third part of chromosome in place
+        param: chromosome 1D array
+        """
+
         if random.random() <= self.mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
-            # Ensure pos1 < pos2
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
-            # Perform inversion in place
+            # Perform inversion
             chromosome[pos1:pos2 + 1] = chromosome[pos1:pos2 + 1][::-1]
 
     # third part of chromosome in place
     def insertion(self, chromosome: np.ndarray):
-        # Check if mutation should occur
+        """
+        Applying to third part of chromosome in place
+        param: chromosome 1D array
+        """
+
         if random.random() <= self.mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
-            # Ensure pos1 < pos2
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
             # Get the customer to insert
@@ -114,4 +136,9 @@ class Mutation:
             chromosome[:] = np.insert(removed_gene, pos1 + 1, gene_to_insert)
 
     def _generate_distinct_positions(self, num_positions):
+        """
+        Utility method to generate 2 distinct integer numbers
+        param: num_positions integer number indicating the range
+        """
+
         return np.random.choice(range(self.START_THIRD_PART, self.END_THIRD_PART), size=num_positions, replace=False)

@@ -6,6 +6,10 @@ from vrp_instance import VRPInstance
 
 
 class Crossover:
+    """
+    Genetic operator to recombine genetic information of parents to produce a child
+    """
+
     adaptive_crossover_rate = 0.5  # TODO
 
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
@@ -15,8 +19,13 @@ class Crossover:
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
         self.CROSSOVER_RATE = crossover_rate
 
-    # first and second part of chromosome
     def uniform(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
+        """
+        Applying to first and second part of chromosome
+        param: parent 1 and parent 2 1D array
+        return: child 1D array
+        """
+
         # Check if crossover should occur
         if random.random() > self.CROSSOVER_RATE:
             return parent1  # No crossover, return parent1 as is
@@ -24,12 +33,12 @@ class Crossover:
         child = parent1.copy()
 
         # Iterate through the depots and apply uniform crossover
-        for i in range(self.START_THIRD_PART):
+        for i in range(self.START_SECOND_PART):
             if random.random() <= self.adaptive_crossover_rate:
                 child[i] = parent2[i]
 
         # Iterate through the vehicles and apply uniform crossover
-        for i in range(self.START_THIRD_PART, self.START_THIRD_PART):
+        for i in range(self.START_SECOND_PART, self.START_THIRD_PART):
             if random.random() <= self.adaptive_crossover_rate:
                 child[i] = parent2[i]
 
@@ -37,19 +46,23 @@ class Crossover:
 
     # third part of chromosome
     def order(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
-        # Check if crossover should occur
+        """
+        Applying to first and second part of chromosome
+        param: parent 1 and parent 2 1D array
+        return: child 1D array
+        """
+
         if random.random() > self.CROSSOVER_RATE:
-            return parent1  # No crossover, return parent1 as is
+            return parent1
 
         # Ensure two distinct random positions
         pos1, pos2 = np.random.choice(range(self.START_THIRD_PART, self.END_THIRD_PART), size=2, replace=False)
         # Ensure pos1 < pos2
         pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
-        print(f"{pos1} {pos2}")
 
         # Create child chromosome 
         child = np.zeros_like(parent1)
-        # Copy first part of chromosome
+        # Copy first and second part of chromosome
         child[:self.START_THIRD_PART] = parent1[:self.START_THIRD_PART]
         # Copy the customers within the specified range
         child[pos1:pos2 + 1] = parent1[pos1:pos2 + 1]
