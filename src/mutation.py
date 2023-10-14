@@ -18,7 +18,7 @@ class Mutation:
         self.START_SECOND_PART = vrp_instance.n_depots
         self.START_THIRD_PART = self.START_SECOND_PART + vrp_instance.n_vehicles
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
-        self.mutation_rate = mutation_rate
+        self.MUTATION_RATE = mutation_rate
 
     def uniform(self, chromosome: np.ndarray):
         """
@@ -31,20 +31,20 @@ class Mutation:
         max_vehicle = self.vrp_instance.n_vehicles
 
         # Iterate through the depots and apply uniform mutation
-        for i in range(self.START_SECOND_PART):
-            if random.random() <= self.mutation_rate:
-                mutated_value = np.random.randint(min_vehicle, max_vehicle + 1)
-                chromosome[i] = mutated_value
+        # for i in range(self.START_SECOND_PART):
+        #     if random.random() <= self.mutation_rate:
+        #         mutated_value = np.random.randint(min_vehicle, max_vehicle + 1)
+        #         chromosome[i] = mutated_value
 
         # Define the range for mutated number of customers
-        # Vehicle can have 0 customers to server TODO valid? 
-        min_customer = 0
-        # max customers limited that every other vehicle can have at least one customer
-        max_customer = self.vrp_instance.n_customers  # TODO - self.vrp_instance.n_vehicles + 1
+        # Single vehicle should at least server 10% of all customers TODO valid?
+        min_customer = self.vrp_instance.n_customers * 0.15
+        # max customers limited that every other vehicle can have at least one customer TODO valid?
+        max_customer = self.vrp_instance.n_customers - self.vrp_instance.n_vehicles * min_customer
 
         # Iterate through the vehicles and apply uniform mutation
         for i in range(self.START_SECOND_PART, self.START_THIRD_PART):
-            if random.random() <= self.mutation_rate:
+            if random.random() <= self.MUTATION_RATE:
                 mutated_value = np.random.randint(min_customer, max_customer + 1)
                 chromosome[i] = mutated_value
 
@@ -95,7 +95,7 @@ class Mutation:
         """
 
         # Check if mutation should occur
-        if random.random() <= self.mutation_rate:
+        if random.random() <= self.adaptive_mutation_rate:
             positions = self._generate_distinct_positions(2)
             pos1, pos2 = positions[0], positions[1]
 
@@ -108,7 +108,7 @@ class Mutation:
         param: chromosome 1D array
         """
 
-        if random.random() <= self.mutation_rate:
+        if random.random() <= self.adaptive_mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
@@ -122,7 +122,7 @@ class Mutation:
         param: chromosome 1D array
         """
 
-        if random.random() <= self.mutation_rate:
+        if random.random() <= self.adaptive_mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 

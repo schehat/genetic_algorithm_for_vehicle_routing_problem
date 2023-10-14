@@ -48,17 +48,17 @@ if __name__ == "__main__":
     # Set the print options to control the display format
 
     # TESTING WITHOUT BENCHMARK
-    n_customers = 12
-    n_depots = 2
-    customers = np.zeros((n_customers,), dtype=Customer)
-    depots = np.zeros((n_depots,), dtype=Depot)
-    for i in range(12):
-        customer = Customer(i+1, i*10, i*5, (1+i)*5)
-        customers[i] = customer
-    for i in range(2):
-        depot = Depot(i+1, 10**(i+1), 50*i)
-        depots[i] = depot
-    vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots)
+    # n_customers = 12
+    # n_depots = 2
+    # customers = np.zeros((n_customers,), dtype=Customer)
+    # depots = np.zeros((n_depots,), dtype=Depot)
+    # for i in range(12):
+    #     customer = Customer(i+1, i*10, i*5, (1+i)*5)
+    #     customers[i] = customer
+    # for i in range(2):
+    #     depot = Depot(i+1, 10**(i+1), 50*i)
+    #     depots[i] = depot
+    # vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots)
 
     # TEST MUTATION AND CROSSOVER
     # mutation_rate = 1.0
@@ -90,13 +90,13 @@ if __name__ == "__main__":
     #     print(f"  X-coordinate: {depot.x}")
     #     print(f"  Y-coordinate: {depot.y}")
 
-    # instance_file_path = "../benchmark/C-mdvrp/p01"
-    # vrp_instance = read_cordeau_instance(instance_file_path)
+    instance_file_path = "../benchmark/C-mdvrp/p01"
+    vrp_instance = read_cordeau_instance(instance_file_path)
 
-    population_size = 50
-    crossover_rate = 1.0
-    mutation_rate = 0.1
-    max_generations = 100
+    population_size = 300
+    crossover_rate = 0.5
+    mutation_rate = 0.25
+    max_generations = 2000
     fitness_scaling = FitnessScaling.power_rank
     selection_method = Selection.n_tournament
 

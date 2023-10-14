@@ -10,7 +10,7 @@ class Crossover:
     Genetic operator to recombine genetic information of parents to produce a child
     """
 
-    adaptive_crossover_rate = 0.5  # TODO
+    adaptive_crossover_rate = None
 
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
         self.vrp_instance: VRPInstance = vrp_instance
@@ -27,19 +27,19 @@ class Crossover:
         """
 
         # Check if crossover should occur
-        if random.random() > self.CROSSOVER_RATE:
+        if random.random() > self.adaptive_crossover_rate:
             return parent1  # No crossover, return parent1 as is
 
         child = parent1.copy()
 
-        # Iterate through the depots and apply uniform crossover
-        for i in range(self.START_SECOND_PART):
-            if random.random() <= self.adaptive_crossover_rate:
-                child[i] = parent2[i]
+        # # Iterate through the depots and apply uniform crossover
+        # for i in range(self.START_SECOND_PART):
+        #     if random.random() <= self.adaptive_crossover_rate:
+        #         child[i] = parent2[i]
 
         # Iterate through the vehicles and apply uniform crossover
         for i in range(self.START_SECOND_PART, self.START_THIRD_PART):
-            if random.random() <= self.adaptive_crossover_rate:
+            if random.random() <= self.CROSSOVER_RATE:
                 child[i] = parent2[i]
 
         return child
@@ -52,7 +52,7 @@ class Crossover:
         return: child 1D array
         """
 
-        if random.random() > self.CROSSOVER_RATE:
+        if random.random() > self.adaptive_crossover_rate:
             return parent1
 
         # Ensure two distinct random positions
