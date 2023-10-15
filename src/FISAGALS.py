@@ -7,9 +7,10 @@ from crossover import Crossover
 from customer import Customer
 from depot import Depot
 from mutation import Mutation
+from src.save_plots import SavePlots
 from vrp_instance import VRPInstance
 import matplotlib.pyplot as plt
-from numpy.polynomial.polynomial import polyfit
+import datetime
 
 
 class FISAGALS:
@@ -28,9 +29,11 @@ class FISAGALS:
     k1 = 1
     k2 = 0.5
     THRESHOLD = 100
+    TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     def __init__(self, vrp_instance: VRPInstance, population_size: int, crossover_rate: float, mutation_rate: float,
-                 max_generations: int, fitness_scaling: Callable[[ndarray], ndarray], selection_method: Callable[[ndarray, ndarray, int], ndarray]):
+                 max_generations: int, fitness_scaling: Callable[[ndarray], ndarray],
+                 selection_method: Callable[[ndarray, ndarray, int], ndarray]):
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance, crossover_rate)
@@ -186,9 +189,12 @@ class FISAGALS:
 
         plt.xlabel('Generation')
         plt.ylabel('Fitness')
-        plt.title('Fitness Values over Generations at 50-Generation Intervals')
+        plt.title('Fitness over Generations')
         plt.grid(True)
         plt.legend()
+
+        SavePlots.save(plt, f"../results/{self.__class__.__name__}/{self.TIMESTAMP}", f"fitness")
+
         plt.show()
 
     def plot_routes(self, chromosome: ndarray):
@@ -206,6 +212,7 @@ class FISAGALS:
         # keep track of iterations of a depot
         depot_value_counter = 1
 
+        # TODO plot depots for every rout
         colors = ["red", "green", "blue", "orange"]
         for i in range(self.vrp_instance.n_depots):
             depot: Depot = self.vrp_instance.depots[i]
@@ -282,11 +289,13 @@ class FISAGALS:
 
             plt.xlabel('X Coordinate')
             plt.ylabel('Y Coordinate')
-            plt.title('Routes Visualization')
+            plt.title(f'Routes Visualization Vehicle {i}')
             plt.grid(True)
             plt.legend()
+
+            SavePlots.save(plt, f"../results/{self.__class__.__name__}/{self.TIMESTAMP}", f"route_vehicle_{i}")
+
             plt.show()
-        print(1)
 
     def run(self):
         """
@@ -298,8 +307,9 @@ class FISAGALS:
 
         for generation in range(self.max_generations):
             # Fitness evaluation and scaling
-            fitness_scores = np.array([(int(i), self.evaluate_fitness(chromosome)) for i, chromosome in enumerate(population)],
-                                      dtype=np.dtype([("index", int), ("fitness", float)]))
+            fitness_scores = np.array(
+                [(int(i), self.evaluate_fitness(chromosome)) for i, chromosome in enumerate(population)],
+                dtype=np.dtype([("index", int), ("fitness", float)]))
 
             self.fitness_scaling(fitness_scores, self.fitness_stats, generation)
 
@@ -314,30 +324,35 @@ class FISAGALS:
             self.selection_method(population, fitness_scores, 10)
 
             # Elitism: Replace the 10% worst individuals with the best individuals
-            worst_individuals_i = np.argpartition(fitness_scores["fitness"], int(self.population_size * 0.1))[:int(self.population_size * 0.1)]
+            worst_individuals_i = np.argpartition(fitness_scores["fitness"], int(self.population_size * 0.1))[
+                                  :int(self.population_size * 0.1)]
             for i, worst_i in enumerate(worst_individuals_i):
                 population[worst_i] = top_chromosome_i[i]
                 fitness_scores["fitness"][worst_i] = top_individuals_i["fitness"][i]
 
             # Crossover
-            children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers), dtype=population.dtype)
+            children = np.empty((self.population_size,
+                                 self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers),
+                                dtype=population.dtype)
             for i in range(0, self.population_size, 2):
                 # Adaptive rates for genetic operators
-                min_parent_fitness = min(fitness_scores["fitness"][i], fitness_scores["fitness"][i+1])
+                min_parent_fitness = min(fitness_scores["fitness"][i], fitness_scores["fitness"][i + 1])
                 if min_parent_fitness <= self.fitness_stats[generation]["avg"]:
-                    max_parent_fitness = max(fitness_scores["fitness"][i], fitness_scores["fitness"][i+1])
+                    max_parent_fitness = max(fitness_scores["fitness"][i], fitness_scores["fitness"][i + 1])
                     numerator = min_parent_fitness - self.fitness_stats[generation]["min"]
                     denominator = max_parent_fitness - self.fitness_stats[generation]["min"]
 
-                    self.crossover.adaptive_crossover_rate = self.k1 * (numerator/denominator)
-                    self.mutation.adaptive_mutation_rate = self.k2 * (numerator/denominator)
+                    self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
+                    self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
                 else:
                     self.crossover.adaptive_crossover_rate = self.k1
                     self.mutation.adaptive_mutation_rate = self.k2
 
                 # Generate children, second child by swapping parents
-                children[i] = self.crossover.order(self.crossover.uniform(population[i], population[i + 1]), population[i + 1])
-                children[i + 1] = self.crossover.order(self.crossover.uniform(population[i + 1], population[i]), population[i])
+                children[i] = self.crossover.order(self.crossover.uniform(population[i], population[i + 1]),
+                                                   population[i + 1])
+                children[i + 1] = self.crossover.order(self.crossover.uniform(population[i + 1], population[i]),
+                                                       population[i])
 
             # Mutation
             for i in range(0, self.population_size):
@@ -364,4 +379,3 @@ class FISAGALS:
         # # Return the best solution found
         # best_solution = min(population, key=self.evaluate_fitness)
         # return best_solution
-
