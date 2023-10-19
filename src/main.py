@@ -93,10 +93,10 @@ if __name__ == "__main__":
     instance_file_path = "../benchmark/C-mdvrp/p01"
     vrp_instance = read_cordeau_instance(instance_file_path)
 
-    population_size = 300
+    population_size = 100
     crossover_rate = 0.5
     mutation_rate = 0.5
-    max_generations = 2000
+    max_generations = 1000
     fitness_scaling = FitnessScaling.power_rank
     selection_method = Selection.n_tournament
 

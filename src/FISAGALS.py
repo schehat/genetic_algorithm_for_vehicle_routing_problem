@@ -28,8 +28,10 @@ class FISAGALS:
     # TODO Adaptive rates parameters for genetic operators
     k1 = 1
     k2 = 0.5
-    THRESHOLD = 100
+    THRESHOLD = 200
     TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    ELITISM_PERCENTAGE = 0.1
+    TOURNAMENT_SIZE = 5
 
     def __init__(self, vrp_instance: VRPInstance, population_size: int, crossover_rate: float, mutation_rate: float,
                  max_generations: int, fitness_scaling: Callable[[ndarray], ndarray],
@@ -118,7 +120,7 @@ class FISAGALS:
 
             # Check if all iterations for vehicles of current depot are done. Then continue with next depot
             if depot_value_counter > chromosome[depot_index]:
-                depot_value_counter = 0
+                depot_value_counter = 1
                 depot_index += 1
 
             vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
@@ -214,9 +216,6 @@ class FISAGALS:
 
         # TODO plot depots for every rout
         colors = ["red", "green", "blue", "orange"]
-        for i in range(self.vrp_instance.n_depots):
-            depot: Depot = self.vrp_instance.depots[i]
-            plt.scatter(depot.x, depot.y, s=100, color=colors[i], label=f'Depot {i + 1}', zorder=2)
 
         for i in range(self.vrp_instance.n_vehicles):
             vehicle_i_n_customers = chromosome[vehicle_index + i]
@@ -225,7 +224,7 @@ class FISAGALS:
 
             # Check if all iterations for vehicles of current depot are done. Then continue with next depot
             if depot_value_counter > chromosome[depot_index]:
-                depot_value_counter = 0
+                depot_value_counter = 1
                 depot_index += 1
 
             vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
@@ -233,7 +232,6 @@ class FISAGALS:
             # Storing the routes for plotting
             x = []
             y = []
-            order = []
 
             for j in range(vehicle_i_n_customers):
                 customer_value1 = chromosome[customer_index + j]
@@ -285,15 +283,20 @@ class FISAGALS:
 
             customer_index += vehicle_i_n_customers
             depot_value_counter += 1
+
+            for index in range(self.vrp_instance.n_depots):
+                depot: Depot = self.vrp_instance.depots[index]
+                plt.scatter(depot.x, depot.y, s=100, color=colors[index], label=f'Depot {index + 1}', zorder=2)
+
             plt.plot(x, y, marker='o', color=colors[i], zorder=1)
 
             plt.xlabel('X Coordinate')
             plt.ylabel('Y Coordinate')
-            plt.title(f'Routes Visualization Vehicle {i}')
+            plt.title(f'Routes Visualization Vehicle {i+1}')
             plt.grid(True)
             plt.legend()
 
-            SavePlots.save(plt, f"../results/{self.__class__.__name__}/{self.TIMESTAMP}", f"route_vehicle_{i}")
+            SavePlots.save(plt, f"../results/{self.__class__.__name__}/{self.TIMESTAMP}", f"route_vehicle_{i+1}")
 
             plt.show()
 
@@ -314,18 +317,18 @@ class FISAGALS:
             self.fitness_scaling(fitness_scores, self.fitness_stats, generation)
 
             # Parent selection
-            # before starting the parent selection. Save 10% of the best individuals
+            # before starting the parent selection. Save percentage of best individuals
             # TODO numpy arraay top_chromosome
-            top_individuals_i = fitness_scores[:int(self.population_size * 0.1)]
+            top_individuals_i = fitness_scores[:int(self.population_size * self.ELITISM_PERCENTAGE)]
             top_chromosome_i = []
             for i, index in enumerate(top_individuals_i):
                 top_chromosome_i.append(population[index[0]])
 
-            self.selection_method(population, fitness_scores, 10)
+            self.selection_method(population, fitness_scores, self.TOURNAMENT_SIZE)
 
-            # Elitism: Replace the 10% worst individuals with the best individuals
-            worst_individuals_i = np.argpartition(fitness_scores["fitness"], int(self.population_size * 0.1))[
-                                  :int(self.population_size * 0.1)]
+            # Elitism: Replace the some percentage of worst individuals with the best individuals
+            worst_individuals_i = np.argpartition(fitness_scores["fitness"], int(self.population_size * self.ELITISM_PERCENTAGE))[
+                                  :int(self.population_size * self.ELITISM_PERCENTAGE)]
             for i, worst_i in enumerate(worst_individuals_i):
                 population[worst_i] = top_chromosome_i[i]
                 fitness_scores["fitness"][worst_i] = top_individuals_i["fitness"][i]
@@ -359,23 +362,34 @@ class FISAGALS:
                 self.mutation.uniform(children[i])
                 self.mutation.swap(children[i])
                 # self.mutation.inversion(children[i])
-                self.mutation.insertion(children[i])
+               #  self.mutation.insertion(children[i])
 
             # TODO add local search
 
             # Replace old generation with new generation
             population = np.copy(children)
 
-            print(generation)
-
-            # # Termination convergence criteria
-            # print(f"{generation}: {generation - int(self.max_generations*0.3)}")
-            # if self.fitness_stats["min"][generation] - self.THRESHOLD > self.fitness_stats["min"][generation - int(self.max_generations*0.3)] if generation - int(self.max_generations*0.3) >= 0 else float('inf'):
+            # Termination convergence criteria
+            print(f"{generation}")
+            # fitness_bound = self.fitness_stats["min"][generation - int(self.max_generations*0.3)] if generation - int(self.max_generations*0.3) >= 0 else float('inf')
+            # if self.fitness_stats["min"][generation] - self.THRESHOLD > fitness_bound:
             #     break
 
         self.plot_fitness()
         min_index = np.argmin(fitness_scores["fitness"])
         self.plot_routes(population[fitness_scores[min_index]["index"]])
-        # # Return the best solution found
-        # best_solution = min(population, key=self.evaluate_fitness)
-        # return best_solution
+
+        with open(f'../results/{self.__class__.__name__}/{self.TIMESTAMP}/best_chromosome.txt', 'a') as file:
+            file.write(f'Population size: {self.population_size}'
+                       f'\nGenerations: {self.max_generations}'
+                       f'\nMutation and crossover: adaptive'
+                       f'\nFitness scaling: {self.fitness_scaling.__name__}'
+                       f'\nSelection method: {self.selection_method.__name__}'
+                       f'\nTournament size: {self.TOURNAMENT_SIZE}'
+                       f'\nElitism: {self.ELITISM_PERCENTAGE}'
+                       f'\nFitness: {self.fitness_stats["min"][generation]:.2f}'
+                       f'\nBest chromosome: ')
+            np.savetxt(file, population[0], fmt='%d', newline=' ')
+
+        # Return the best solution found
+        print(population[0])
