@@ -1,0 +1,9 @@
+Population size: 100
+Generations: 1000
+Mutation and crossover: adaptive
+Fitness scaling: power_rank
+Selection method: n_tournament
+Tournament size: 5
+Elitism: 0.1
+Fitness: 679.84
+Best chromosome: 1 1 1 1 7 17 13 13 40 19 42 44 15 37 17 41 13 25 4 47 12 18 14 6 23 24 43 7 26 1 32 27 8 48 46 5 10 39 33 45 49 30 34 50 9 11 38 16 21 29 2 20 35 36 3 28 31 22 

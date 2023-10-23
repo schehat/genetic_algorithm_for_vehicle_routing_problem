@@ -2,18 +2,13 @@ import numpy as np
 from numpy import ndarray
 
 
-class LocalSearch:
+def linear(self):
+    pass
+
+
+def two_opt(chromosome: ndarray):
     """
-    Utility class TODO
+    TODO
     """
 
-    def linear(self):
-        pass
-
-    @staticmethod
-    def two_opt(chromosome: ndarray):
-        """
-        TODO
-        """
-
-        pass
+    pass

@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from vrp_instance import VRPInstance
+from vrp import VRPInstance
 
 
 class Mutation:
@@ -11,7 +11,8 @@ class Mutation:
     and local search technique to find better results
     """
 
-    adaptive_mutation_rate = 1  # TODO
+    # Will be set from the GA
+    adaptive_mutation_rate = None
 
     def __init__(self, vrp_instance: VRPInstance, mutation_rate: float):
         self.vrp_instance: VRPInstance = vrp_instance

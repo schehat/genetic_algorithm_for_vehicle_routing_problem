@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from vrp_instance import VRPInstance
+from vrp import VRPInstance
 
 
 class Crossover:
@@ -10,6 +10,7 @@ class Crossover:
     Genetic operator to recombine genetic information of parents to produce a child
     """
 
+    # Will be set from the GA
     adaptive_crossover_rate = None
 
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
@@ -21,7 +22,7 @@ class Crossover:
 
     def uniform(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """
-        Applying to first and second part of chromosome
+        Applying uniform crossover to first and second part of chromosome
         param: parent 1 and parent 2 1D array
         return: child 1D array
         """
@@ -44,10 +45,9 @@ class Crossover:
 
         return child
 
-    # third part of chromosome
     def order(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """
-        Applying to first and second part of chromosome
+        Applying order crossover to third part of chromosome
         param: parent 1 and parent 2 1D array
         return: child 1D array
         """

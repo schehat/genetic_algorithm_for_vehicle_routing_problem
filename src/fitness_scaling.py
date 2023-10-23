@@ -2,35 +2,26 @@ import numpy as np
 from numpy import ndarray
 
 
-class FitnessScaling:
+def linear():
+    pass
+
+
+def power_rank(fitness_scores: ndarray, exponent: float = 1.005):
     """
-    Utility class providing methods to scale the raw fitness value to a more suitable range for selection
+    Combining rank selection and power-scaling for more robust behavior and fast convergence.
+    param: fitness structured 2D array ["index]["fitness"]
+    param: exponent - control parameter for selection pressure. In literature 1.005 is recommended
     """
 
-    def linear(self):
-        pass
+    # Sort fitness in ascending order
+    fitness_scores.sort(order='fitness')
 
-    @staticmethod
-    def power_rank(fitness: ndarray, fitness_stats: ndarray, generation: int):
-        """
-        Combining rank selection and power-scaling
-        param: fitness structured 2D array ["index]["fitness"]
-        """
+    # Calculate the rank for each fitness value
+    rank = np.arange(len(fitness_scores))
 
-        # Sort fitness in ascending order
-        fitness.sort(order='fitness')
+    # Calculate the power of the rank and replace raw fitness
+    fitness_scores['fitness'] = (len(fitness_scores) - rank) ** exponent
 
-        # Save statistics about raw fitness
-        fitness_stats[generation]["max"] = np.max(fitness['fitness'])
-        fitness_stats[generation]["avg"] = np.mean(fitness['fitness'])
-        fitness_stats[generation]["min"] = np.min(fitness['fitness'])
-
-        # Calculate the rank for each fitness value
-        rank = np.arange(len(fitness))
-
-        # Calculate the power of the rank with 1.005 and replace raw fitness
-        fitness['fitness'] = (len(fitness) - rank) ** 1.005
-
-        # Normalize the calculated power fitness
-        sum_of_powers = np.sum(fitness['fitness'])
-        fitness['fitness'] /= sum_of_powers
+    # Normalize the calculated power fitness
+    sum_of_powers = np.sum(fitness_scores['fitness'])
+    fitness_scores['fitness'] /= sum_of_powers
