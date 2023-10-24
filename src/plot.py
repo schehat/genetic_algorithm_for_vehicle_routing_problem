@@ -18,11 +18,12 @@ def plot_fitness(ga, width=8, height=6, interval=50):
     plt.figure(figsize=(width, height))
 
     x = np.arange(ga.max_generations)
+    min_fitness = ga.fitness_stats["min"]
+    avg_fitness = ga.fitness_stats["avg"]
 
     # Plot data points at 50-generation intervals
-    plt.plot(x[::interval], ga.fitness_stats["min"][::interval], marker='o', label='Min Fitness')
-    plt.plot(x[::interval], ga.fitness_stats["avg"][::interval], marker='o', label='Avg Fitness')
-    # plt.plot(x[::interval], ga.fitness_stats["max"][::interval], marker='o', label='Max Fitness')
+    plt.plot(x[::interval], min_fitness[::interval], marker='o', label='Min Fitness')
+    plt.plot(x[::interval], avg_fitness[::interval], marker='o', label='Avg Fitness')
 
     plt.xlabel('Generation')
     plt.ylabel('Fitness')

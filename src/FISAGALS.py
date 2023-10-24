@@ -17,7 +17,7 @@ class FISAGALS:
     - Chromosome representation specific integer string consisting of three parts:
         1. Number of vehicles for each depot
         1. Number of customers for each vehicle to serve
-        2. The order of customers for each vehicle to serve
+        3. The order of customers for each vehicle to serve
         E.g. for 2 depots with 3 vehicles and 7 customers (2, 1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 7)
         => first depot (index 0) has 2 vehicles, first vehicle (index 2) serves customer 1 and 2 (index 5 and 6)
         => second depot (Index 1) has 1 vehicles (index 2), serving customer 6 and 7 (index 10, 11)
@@ -47,26 +47,33 @@ class FISAGALS:
         self.max_generations = max_generations
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, ndarray, int], ndarray] = selection_method
-        self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float)]))
         self.tournament_size = tournament_size
         self.elitism_percentage = elitism_percentage
         self.k1 = k1
         self.k2 = k2
 
-    def generate_initial_population(self) -> ndarray:
+        population_type = np.dtype([
+            ("individual", int),
+            ("chromosome", int,
+             (self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers,)),
+            ("fitness", float),
+        ])
+        self.population = np.zeros(self.population_size, dtype=population_type)
+        self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float)]))
+
+    def generate_initial_population(self):
         """
-        Random initial population
-        return: 2D array with all chromosome in the population
+        Generate random initial population
         """
 
-        initial_population = []
-        for _ in range(self.population_size):
+        for i in range(self.population_size):
             # Part 1: Number of vehicles for each depot
             depot_vehicle_count = np.zeros(self.vrp_instance.n_depots, dtype=int)
-            for i in range(self.vrp_instance.n_vehicles):
+            for depot_index in range(self.vrp_instance.n_vehicles):
+                # For now giving every depot 1 vehicle. TODO make dynamic, more interesting when n_vehicles > n_depots
                 # depot_index = np.random.randint(self.vrp_instance.n_depots)
                 # depot_vehicle_count[depot_index] += 1
-                depot_vehicle_count[i] = 1
+                depot_vehicle_count[depot_index] = 1
 
             # Part 2: Number of customers for each vehicle
             vehicle_customer_count = np.zeros(self.vrp_instance.n_vehicles, dtype=int)
@@ -74,26 +81,26 @@ class FISAGALS:
             avg_customers_per_vehicle = self.vrp_instance.n_customers / self.vrp_instance.n_vehicles
             std_deviation = 1.0
 
-            # One additional loop to guarantee all customers are assigned to vehicles
-            for i in range(self.vrp_instance.n_vehicles + 1):
+            # One additional loop to guarantee all customers are assigned to vehicles, relevant in else block
+            for vehicle_index in range(self.vrp_instance.n_vehicles + 1):
                 # Calculate the maximum number of customers that can be assigned to this vehicle
                 max_customers = self.vrp_instance.n_customers - total_customers_assigned
                 if max_customers < 1:
                     break
 
                 # Excluding the additional loop
-                if i < self.vrp_instance.n_vehicles:
+                if vehicle_index < self.vrp_instance.n_vehicles:
                     # Generate a random number of customers for this vehicle using a Gaussian distribution
                     # centered around the avg_customers_per_vehicle
                     num_customers = int(np.random.normal(loc=avg_customers_per_vehicle, scale=std_deviation))
                     # Ensure it's within valid bounds
                     num_customers = max(1, min(max_customers, num_customers))
-                    vehicle_customer_count[i] = num_customers
+                    vehicle_customer_count[vehicle_index] = num_customers
                 else:
                     # If all vehicles assigned and customers remain, assign the rest to random vehicle
                     num_customers = max_customers
-                    i = np.random.randint(self.vrp_instance.n_vehicles)
-                    vehicle_customer_count[i] += num_customers
+                    vehicle_index = np.random.randint(self.vrp_instance.n_vehicles)
+                    vehicle_customer_count[vehicle_index] += num_customers
 
                 total_customers_assigned += num_customers
 
@@ -102,9 +109,8 @@ class FISAGALS:
 
             # Combine the three parts to form a chromosome
             chromosome = np.concatenate((depot_vehicle_count, vehicle_customer_count, order_of_customers))
-            initial_population.append(chromosome)
-
-        return np.array(initial_population, dtype=int)
+            self.population[i]["individual"] = i
+            self.population[i]["chromosome"] = chromosome
 
     def evaluate_fitness(self, chromosome: ndarray) -> float:
         """
@@ -192,7 +198,7 @@ class FISAGALS:
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nTournament size: {self.tournament_size}'
                        f'\nElitism: {self.elitism_percentage}'
-                       f'\nFitness: {self.fitness_stats["min"][generation]:.2f}'
+                       f'\nFitness: {self.fitness_stats[generation]["min"]:.2f}'
                        f'\nBest chromosome: ')
             np.savetxt(file, chromosome, fmt='%d', newline=' ')
 
@@ -201,62 +207,66 @@ class FISAGALS:
         Execution of FISAGALS
         """
 
-        population = self.generate_initial_population()
+        self.generate_initial_population()
 
         for generation in range(self.max_generations):
-            # Fitness evaluation and scaling
-            fitness_scores = np.array(
-                [(int(i), self.evaluate_fitness(chromosome)) for i, chromosome in enumerate(population)],
-                dtype=np.dtype([("index", int), ("fitness", float)]))
+            # Fitness evaluation
+            for i, chromosome in enumerate(self.population["chromosome"]):
+                self.population[i]["fitness"] = self.evaluate_fitness(chromosome)
 
             # Save statistics about raw fitness
-            self.fitness_stats[generation]["max"] = np.max(fitness_scores['fitness'])
-            self.fitness_stats[generation]["avg"] = np.mean(fitness_scores['fitness'])
-            self.fitness_stats[generation]["min"] = np.min(fitness_scores['fitness'])
+            self.fitness_stats[generation]["max"] = np.max(self.population["fitness"])
+            self.fitness_stats[generation]["avg"] = np.mean(self.population["fitness"])
+            self.fitness_stats[generation]["min"] = np.min(self.population["fitness"])
 
-            self.fitness_scaling(fitness_scores)
+            self.fitness_scaling(self.population)
 
             # Parent selection
             # before starting the parent selection. Save percentage of best individuals
-            # TODO numpy arraay top_chromosome
-            top_individuals_i = fitness_scores[:int(self.population_size * self.elitism_percentage)]
-            top_chromosome_i = []
-            for i, index in enumerate(top_individuals_i):
-                top_chromosome_i.append(population[index[0]])
+            top_individuals_i = np.argsort(self.population["fitness"])[
+                                :int(self.population_size * self.elitism_percentage)]
+            top_individuals = self.population[top_individuals_i]
 
-            self.selection_method(population, fitness_scores, self.tournament_size)
+            self.selection_method(self.population, self.tournament_size)
 
-            # Elitism: Replace the some percentage of worst individuals with the best individuals
-            worst_individuals_i = np.argpartition(fitness_scores["fitness"],
-                                                  int(self.population_size * self.elitism_percentage))[
-                                  :int(self.population_size * self.elitism_percentage)]
-            for i, worst_i in enumerate(worst_individuals_i):
-                population[worst_i] = top_chromosome_i[i]
-                fitness_scores["fitness"][worst_i] = top_individuals_i["fitness"][i]
+            # Elitism: Replace some percentage of the worst individuals with the best individuals
+            worst_individuals_i = np.argsort(self.population["fitness"])[:int(self.population_size * self.elitism_percentage)]
+            self.population[worst_individuals_i] = top_individuals
 
             # Crossover
             children = np.empty((self.population_size,
                                  self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers),
-                                dtype=population.dtype)
-            for i in range(0, self.population_size, 2):
+                                dtype=int)
+            for individual in range(0, self.population_size, 2):
                 # Adaptive rates for genetic operators
-                min_parent_fitness = min(fitness_scores["fitness"][i], fitness_scores["fitness"][i + 1])
+                min_parent_fitness = max(self.population[individual]["fitness"],
+                                         self.population[individual + 1]["fitness"])
                 if min_parent_fitness <= self.fitness_stats[generation]["avg"]:
-                    max_parent_fitness = max(fitness_scores["fitness"][i], fitness_scores["fitness"][i + 1])
+                    max_parent_fitness = min(self.population[individual]["fitness"],
+                                             self.population[individual + 1]["fitness"])
                     numerator = min_parent_fitness - self.fitness_stats[generation]["min"]
                     denominator = max_parent_fitness - self.fitness_stats[generation]["min"]
 
-                    self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
-                    self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+                    try:
+                        self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
+                        self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+                    except ZeroDivisionError:
+                        self.crossover.adaptive_crossover_rate = self.k1 / 4
+                        self.mutation.adaptive_mutation_rate = self.k2 / 4
                 else:
                     self.crossover.adaptive_crossover_rate = self.k1
                     self.mutation.adaptive_mutation_rate = self.k2
 
                 # Generate children, second child by swapping parents
-                children[i] = self.crossover.order(self.crossover.uniform(population[i], population[i + 1]),
-                                                   population[i + 1])
-                children[i + 1] = self.crossover.order(self.crossover.uniform(population[i + 1], population[i]),
-                                                       population[i])
+                children[individual] = self.crossover.order(
+                    self.crossover.uniform(self.population[individual]["chromosome"],
+                                           self.population[individual + 1]["chromosome"]),
+                    self.population[individual + 1]["chromosome"])
+
+                children[individual + 1] = self.crossover.order(
+                    self.crossover.uniform(self.population[individual + 1]["chromosome"],
+                                           self.population[individual]["chromosome"]),
+                    self.population[individual]["chromosome"])
 
             # Mutation
             for i in range(0, self.population_size):
@@ -272,7 +282,7 @@ class FISAGALS:
             # TODO add local search
 
             # Replace old generation with new generation
-            population = np.copy(children)
+            self.population["chromosome"] = children
 
             # Termination convergence criteria
             print(f"{generation}")
@@ -282,9 +292,9 @@ class FISAGALS:
 
         plot_fitness(self)
         # get and plot best individual
-        min_index = np.argmin(fitness_scores["fitness"])
-        plot_routes(self, population[fitness_scores[min_index]["index"]])
-        self.log_configuration(generation, population[fitness_scores[min_index]["index"]])
+        min_index = np.argmax(self.population["fitness"])
+        plot_routes(self, self.population[min_index]["chromosome"])
+        self.log_configuration(generation, self.population[min_index]["chromosome"])
 
         # Return the best solution found
-        print(population[0])
+        print(self.population[0])

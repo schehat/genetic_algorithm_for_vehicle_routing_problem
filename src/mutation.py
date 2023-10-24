@@ -58,21 +58,21 @@ class Mutation:
         """
 
         # iterate through depots
-        sum_vehicles = np.sum(chromosome[:self.START_SECOND_PART])
-        diff = sum_vehicles - self.vrp_instance.n_vehicles
-
-        while diff != 0:
-            random_index = np.random.randint(0, self.START_SECOND_PART)
-
-            if diff > 0:
-                # Decrease value if difference positive. But if value = 1 then do nothing
-                if chromosome[random_index] > 1:
-                    chromosome[random_index] -= 1
-                    diff -= 1
-            else:
-                # Increase value if difference is negative 
-                chromosome[random_index] += 1
-                diff += 1
+        # sum_vehicles = np.sum(chromosome[:self.START_SECOND_PART])
+        # diff = sum_vehicles - self.vrp_instance.n_vehicles
+        #
+        # while diff != 0:
+        #     random_index = np.random.randint(0, self.START_SECOND_PART)
+        #
+        #     if diff > 0:
+        #         # Decrease value if difference positive. But if value = 1 then do nothing
+        #         if chromosome[random_index] > 1:
+        #             chromosome[random_index] -= 1
+        #             diff -= 1
+        #     else:
+        #         # Increase value if difference is negative
+        #         chromosome[random_index] += 1
+        #         diff += 1
 
         # iterate through vehicles
         sum_customers = np.sum(chromosome[self.START_SECOND_PART:self.START_THIRD_PART])
