@@ -138,7 +138,7 @@ class Mutation:
 
     def _generate_distinct_positions(self, num_positions):
         """
-        Utility method to generate 2 distinct integer numbers
+        Generate random distinct integer numbers
         param: num_positions integer number indicating the range
         """
 

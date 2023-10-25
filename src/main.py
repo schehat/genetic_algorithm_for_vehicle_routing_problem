@@ -86,7 +86,7 @@ if __name__ == "__main__":
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 1000
+    MAX_GENERATIONS = 200
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournament
 

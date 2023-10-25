@@ -7,6 +7,7 @@ from numpy import ndarray
 from crossover import Crossover
 from mutation import Mutation
 from plot import plot_fitness, plot_routes
+from purpose import Purpose
 from vrp import Customer, Depot, VRPInstance
 import datetime
 
@@ -25,6 +26,7 @@ class FISAGALS:
 
     THRESHOLD = 200
     TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    generation = 0
 
     def __init__(self, vrp_instance: VRPInstance,
                  population_size: int,
@@ -60,6 +62,59 @@ class FISAGALS:
         ])
         self.population = np.zeros(self.population_size, dtype=population_type)
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float)]))
+
+    def run(self):
+        """
+        Execution of FISAGALS
+        """
+
+        self.generate_initial_population()
+
+        for self.generation in range(self.max_generations):
+            # Fitness evaluation
+            for i, chromosome in enumerate(self.population["chromosome"]):
+                self.population[i]["fitness"] = self.evaluate_fitness(chromosome)
+
+            # Save statistics about raw fitness
+            self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
+            self.fitness_stats[self.generation]["avg"] = np.mean(self.population["fitness"])
+            self.fitness_stats[self.generation]["min"] = np.min(self.population["fitness"])
+
+            self.fitness_scaling(self.population)
+
+            # before starting the parent selection. Save percentage of best individuals
+            top_individuals_i = np.argsort(self.population["fitness"])[
+                                :int(self.population_size * self.elitism_percentage)]
+            top_individuals = self.population[top_individuals_i]
+
+            self.selection_method(self.population, self.tournament_size)
+            self.do_elitism(top_individuals)
+
+            children = np.empty((self.population_size,
+                                 self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers),
+                                dtype=int)
+            children = self.do_crossover(children)
+            children = self.do_mutation(children)
+
+            # TODO add local search
+
+            # Replace old generation with new generation
+            self.population["chromosome"] = children
+
+            # Termination convergence criteria
+            print(f"{self.generation}")
+            # fitness_bound = self.fitness_stats["min"][generation - int(self.max_generations*0.3)] if generation - int(self.max_generations*0.3) >= 0 else float('inf')
+            # if self.fitness_stats["min"][generation] - self.THRESHOLD > fitness_bound:
+            #     break
+
+        plot_fitness(self)
+        # get and plot best individual
+        min_index = np.argmax(self.population["fitness"])
+        plot_routes(self, self.population[min_index]["chromosome"])
+        self.log_configuration(self.population[min_index]["chromosome"])
+
+        # Return the best solution found
+        print(self.population[0])
 
     def generate_initial_population(self):
         """
@@ -114,13 +169,33 @@ class FISAGALS:
 
     def evaluate_fitness(self, chromosome: ndarray) -> float:
         """
-        Fitness evaluation of a single chromosome
-        param: chromosome 1D array
-        return: fitness value
+        Calculate fitness for a single chromosome
+        """
+        total_fitness = 0.0
+
+        def add_fitness(i, j):
+            """
+            param: i and j standing for two customer or a customer and depot
+            """
+            # use fitness declared above to accumulate every fitness
+            nonlocal total_fitness
+            total_fitness += np.linalg.norm(
+                np.array([i.x, i.y]) - np.array([j.x, j.y]))
+
+        # While decoding chromosome use add_fitness() to calculate total_fitness
+        self.decode_chromosome(chromosome, Purpose.FITNESS, add_fitness)
+        return total_fitness
+
+    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose, operation: any):
+        """
+        Decoding chromosome by traversing the genes considering constraints and fetching the routes.
+        Expecting with purpose what way the operation function is going to be used
+        param: chromosome - 1D array
+        param: fitness
+        param: operation - function anticipating 3 parameters to be passed
         """
 
         # fitness: total distance
-        fitness = 0.0
         depot_index = 0
         vehicle_index = self.vrp_instance.n_depots
         customer_index = self.vrp_instance.n_depots + self.vrp_instance.n_vehicles
@@ -148,8 +223,11 @@ class FISAGALS:
                 if j == 0:
                     # Add distance from depot to customer with the euclidean distance.
                     # Assuming single customer demand <= vehicle max capacity
-                    fitness += np.linalg.norm(
-                        np.array([vehicle_i_depot.x, vehicle_i_depot.y]) - np.array([customer_1.x, customer_1.y]))
+                    if purpose.FITNESS:
+                        operation(vehicle_i_depot, customer_1)
+                    elif purpose.PLOTTING:
+                        operation(vehicle_i_depot, vehicle_i_depot)
+                        operation(customer_1, customer_1)
 
                     # TODO add capacity constraint meaning vehicles with different capacity
                     # Thus customer demand > vehicle max capacity possible but at least 1 vehicle exists with greater capacity
@@ -165,31 +243,89 @@ class FISAGALS:
                     if vehicle_i_capacity + customer_2.demand > self.vrp_instance.max_capacity:
                         # Trip back to depot necessary. Assuming heading back to same depot it came from
                         # TODO visit different depot if possible e.g. AF-VRP charging points for robots
-                        fitness += np.linalg.norm(
-                            np.array([customer_1.x, customer_1.y]) - np.array([vehicle_i_depot.x, vehicle_i_depot.y]))
+                        if purpose.FITNESS:
+                            operation(customer_1, vehicle_i_depot)
+                        elif purpose.PLOTTING:
+                            operation(vehicle_i_depot, vehicle_i_depot)
 
                         # from depot to next customer
-                        fitness += np.linalg.norm(
-                            np.array([vehicle_i_depot.x, vehicle_i_depot.y]) - np.array([customer_2.x, customer_2.y]))
+                        if purpose.FITNESS:
+                            operation(vehicle_i_depot, customer_2)
+                        elif purpose.PLOTTING:
+                            operation(customer_2, customer_2)
+
                         vehicle_i_capacity = 0
                     else:
                         # Add distance between customers
-                        fitness += np.linalg.norm(
-                            np.array([customer_1.x, customer_1.y]) - np.array([customer_2.x, customer_2.y]))
+                        if purpose.FITNESS:
+                            operation(customer_1, customer_2)
+                        elif purpose.PLOTTING:
+                            operation(customer_2, customer_2)
 
                     vehicle_i_capacity += customer_2.demand
 
                 # Last iteration in loop, add trip from last customer to depot
                 if j >= vehicle_i_n_customers - 1:
-                    fitness += np.linalg.norm(
-                        np.array([customer_1.x, customer_1.y]) - np.array([vehicle_i_depot.x, vehicle_i_depot.y]))
+                    if purpose.FITNESS:
+                        operation(customer_1, vehicle_i_depot)
+                    elif purpose.PLOTTING:
+                        operation(vehicle_i_depot, vehicle_i_depot)
 
             customer_index += vehicle_i_n_customers
             depot_value_counter += 1
 
-        return fitness
+    def do_elitism(self, top_individuals: ndarray):
+        worst_individuals_i = np.argsort(self.population["fitness"])[
+                              :int(self.population_size * self.elitism_percentage)]
+        self.population[worst_individuals_i] = top_individuals
 
-    def log_configuration(self, generation, chromosome):
+    def do_crossover(self, children: ndarray) -> ndarray:
+        for individual in range(0, self.population_size, 2):
+            # Adaptive rates for genetic operators
+            min_parent_fitness = max(self.population[individual]["fitness"],
+                                     self.population[individual + 1]["fitness"])
+            if min_parent_fitness <= self.fitness_stats[self.generation]["avg"]:
+                max_parent_fitness = min(self.population[individual]["fitness"],
+                                         self.population[individual + 1]["fitness"])
+                numerator = min_parent_fitness - self.fitness_stats[self.generation]["min"]
+                denominator = max_parent_fitness - self.fitness_stats[self.generation]["min"]
+
+                try:
+                    self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
+                    self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+                except ZeroDivisionError:
+                    self.crossover.adaptive_crossover_rate = self.k1 / 4
+                    self.mutation.adaptive_mutation_rate = self.k2 / 4
+            else:
+                self.crossover.adaptive_crossover_rate = self.k1
+                self.mutation.adaptive_mutation_rate = self.k2
+
+            # Generate children, second child by swapping parents
+            children[individual] = self.crossover.order(
+                self.crossover.uniform(self.population[individual]["chromosome"],
+                                       self.population[individual + 1]["chromosome"]),
+                self.population[individual + 1]["chromosome"])
+
+            children[individual + 1] = self.crossover.order(
+                self.crossover.uniform(self.population[individual + 1]["chromosome"],
+                                       self.population[individual]["chromosome"]),
+                self.population[individual]["chromosome"])
+
+        return children
+
+    def do_mutation(self, children):
+        for i in range(0, self.population_size):
+            self.mutation.uniform(children[i])
+            rand_num = random.random()
+            if rand_num < 0.33:
+                self.mutation.swap(children[i])
+            elif 0.33 <= rand_num < 0.66:
+                self.mutation.inversion(children[i])
+            else:
+                self.mutation.insertion(children[i])
+        return children
+
+    def log_configuration(self, chromosome):
         with open(f'../results/{self.__class__.__name__}/{self.TIMESTAMP}/best_chromosome.txt', 'a') as file:
             file.write(f'Population size: {self.population_size}'
                        f'\nGenerations: {self.max_generations}'
@@ -198,103 +334,6 @@ class FISAGALS:
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nTournament size: {self.tournament_size}'
                        f'\nElitism: {self.elitism_percentage}'
-                       f'\nFitness: {self.fitness_stats[generation]["min"]:.2f}'
+                       f'\nFitness: {self.fitness_stats[self.generation]["min"]:.2f}'
                        f'\nBest chromosome: ')
             np.savetxt(file, chromosome, fmt='%d', newline=' ')
-
-    def run(self):
-        """
-        Execution of FISAGALS
-        """
-
-        self.generate_initial_population()
-
-        for generation in range(self.max_generations):
-            # Fitness evaluation
-            for i, chromosome in enumerate(self.population["chromosome"]):
-                self.population[i]["fitness"] = self.evaluate_fitness(chromosome)
-
-            # Save statistics about raw fitness
-            self.fitness_stats[generation]["max"] = np.max(self.population["fitness"])
-            self.fitness_stats[generation]["avg"] = np.mean(self.population["fitness"])
-            self.fitness_stats[generation]["min"] = np.min(self.population["fitness"])
-
-            self.fitness_scaling(self.population)
-
-            # Parent selection
-            # before starting the parent selection. Save percentage of best individuals
-            top_individuals_i = np.argsort(self.population["fitness"])[
-                                :int(self.population_size * self.elitism_percentage)]
-            top_individuals = self.population[top_individuals_i]
-
-            self.selection_method(self.population, self.tournament_size)
-
-            # Elitism: Replace some percentage of the worst individuals with the best individuals
-            worst_individuals_i = np.argsort(self.population["fitness"])[:int(self.population_size * self.elitism_percentage)]
-            self.population[worst_individuals_i] = top_individuals
-
-            # Crossover
-            children = np.empty((self.population_size,
-                                 self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers),
-                                dtype=int)
-            for individual in range(0, self.population_size, 2):
-                # Adaptive rates for genetic operators
-                min_parent_fitness = max(self.population[individual]["fitness"],
-                                         self.population[individual + 1]["fitness"])
-                if min_parent_fitness <= self.fitness_stats[generation]["avg"]:
-                    max_parent_fitness = min(self.population[individual]["fitness"],
-                                             self.population[individual + 1]["fitness"])
-                    numerator = min_parent_fitness - self.fitness_stats[generation]["min"]
-                    denominator = max_parent_fitness - self.fitness_stats[generation]["min"]
-
-                    try:
-                        self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
-                        self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
-                    except ZeroDivisionError:
-                        self.crossover.adaptive_crossover_rate = self.k1 / 4
-                        self.mutation.adaptive_mutation_rate = self.k2 / 4
-                else:
-                    self.crossover.adaptive_crossover_rate = self.k1
-                    self.mutation.adaptive_mutation_rate = self.k2
-
-                # Generate children, second child by swapping parents
-                children[individual] = self.crossover.order(
-                    self.crossover.uniform(self.population[individual]["chromosome"],
-                                           self.population[individual + 1]["chromosome"]),
-                    self.population[individual + 1]["chromosome"])
-
-                children[individual + 1] = self.crossover.order(
-                    self.crossover.uniform(self.population[individual + 1]["chromosome"],
-                                           self.population[individual]["chromosome"]),
-                    self.population[individual]["chromosome"])
-
-            # Mutation
-            for i in range(0, self.population_size):
-                self.mutation.uniform(children[i])
-                rand_num = random.random()
-                if rand_num < 0.33:
-                    self.mutation.swap(children[i])
-                elif 0.33 <= rand_num < 0.66:
-                    self.mutation.inversion(children[i])
-                else:
-                    self.mutation.insertion(children[i])
-
-            # TODO add local search
-
-            # Replace old generation with new generation
-            self.population["chromosome"] = children
-
-            # Termination convergence criteria
-            print(f"{generation}")
-            # fitness_bound = self.fitness_stats["min"][generation - int(self.max_generations*0.3)] if generation - int(self.max_generations*0.3) >= 0 else float('inf')
-            # if self.fitness_stats["min"][generation] - self.THRESHOLD > fitness_bound:
-            #     break
-
-        plot_fitness(self)
-        # get and plot best individual
-        min_index = np.argmax(self.population["fitness"])
-        plot_routes(self, self.population[min_index]["chromosome"])
-        self.log_configuration(generation, self.population[min_index]["chromosome"])
-
-        # Return the best solution found
-        print(self.population[0])
