@@ -15,16 +15,17 @@ class Crossover:
 
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
         self.vrp_instance: VRPInstance = vrp_instance
+        self.CROSSOVER_RATE = crossover_rate
+        # helper attributes
         self.START_SECOND_PART = vrp_instance.n_depots
         self.START_THIRD_PART = self.START_SECOND_PART + vrp_instance.n_vehicles
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
-        self.CROSSOVER_RATE = crossover_rate
 
     def uniform(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """
         Applying uniform crossover to first and second part of chromosome
-        param: parent 1 and parent 2 1D array
-        return: child 1D array
+        param: parent 1 and parent 2 - 1D array
+        return: child - 1D array
         """
 
         # Check if crossover should occur
@@ -48,8 +49,8 @@ class Crossover:
     def order(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """
         Applying order crossover to third part of chromosome
-        param: parent 1 and parent 2 1D array
-        return: child 1D array
+        param: parent 1 and parent 2 - 1D array
+        return: child 1D - array
         """
 
         if random.random() > self.adaptive_crossover_rate:

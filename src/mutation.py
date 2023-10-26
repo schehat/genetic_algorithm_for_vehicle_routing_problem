@@ -14,23 +14,25 @@ class Mutation:
     # Will be set from the GA
     adaptive_mutation_rate = None
 
-    def __init__(self, vrp_instance: VRPInstance, mutation_rate: float):
+    def __init__(self, vrp_instance: VRPInstance, mutation_rate: float, minimum_serving_customers_per_vehicle=0.2):
         self.vrp_instance: VRPInstance = vrp_instance
+        self.MUTATION_RATE = mutation_rate
+        # Helper attributes
         self.START_SECOND_PART = vrp_instance.n_depots
         self.START_THIRD_PART = self.START_SECOND_PART + vrp_instance.n_vehicles
         self.END_THIRD_PART = self.START_THIRD_PART + vrp_instance.n_customers
-        self.MUTATION_RATE = mutation_rate
+        self.minimum_serving_customers_per_vehicle = minimum_serving_customers_per_vehicle
 
     def uniform(self, chromosome: np.ndarray):
         """
-        Applying to first and second part of chromosome in place
+        Applying uniform mutation to first and second part of chromosome in place
         param: chromosome 1D array
         """
 
         # Define the range for mutated numbers of vehicles
-        min_vehicle = 0
-        max_vehicle = self.vrp_instance.n_vehicles
-
+        # min_vehicle = 0
+        # max_vehicle = self.vrp_instance.n_vehicles
+        #
         # Iterate through the depots and apply uniform mutation
         # for i in range(self.START_SECOND_PART):
         #     if random.random() <= self.mutation_rate:
@@ -38,9 +40,7 @@ class Mutation:
         #         chromosome[i] = mutated_value
 
         # Define the range for mutated number of customers
-        # Single vehicle should at least server 10% of all customers TODO valid?
-        min_customer = self.vrp_instance.n_customers * 0.15
-        # max customers limited that every other vehicle can have at least one customer TODO valid?
+        min_customer = self.vrp_instance.n_customers * self.minimum_serving_customers_per_vehicle
         max_customer = self.vrp_instance.n_customers - self.vrp_instance.n_vehicles * min_customer
 
         # Iterate through the vehicles and apply uniform mutation
@@ -54,7 +54,7 @@ class Mutation:
     def _repair_procedure(self, chromosome: np.ndarray):
         """
         After uniform mutation first and second part of chromosome may break and repair procedure needed
-        param: chromosome 1D array
+        param: chromosome - 1D array
         """
 
         # iterate through depots
@@ -91,8 +91,8 @@ class Mutation:
 
     def swap(self, chromosome: np.ndarray):
         """
-        Applying to third part of chromosome in place
-        param: chromosome 1D array
+        Applying swap mutation to third part of chromosome in place
+        param: chromosome - 1D array
         """
 
         # Check if mutation should occur
@@ -105,8 +105,8 @@ class Mutation:
 
     def inversion(self, chromosome: np.ndarray):
         """
-        Applying to third part of chromosome in place
-        param: chromosome 1D array
+        Applying inversion mutation to third part of chromosome in place
+        param: chromosome - 1D array
         """
 
         if random.random() <= self.adaptive_mutation_rate:
@@ -119,8 +119,8 @@ class Mutation:
     # third part of chromosome in place
     def insertion(self, chromosome: np.ndarray):
         """
-        Applying to third part of chromosome in place
-        param: chromosome 1D array
+        Applying insertion mutation to third part of chromosome in place
+        param: chromosome - 1D array
         """
 
         if random.random() <= self.adaptive_mutation_rate:

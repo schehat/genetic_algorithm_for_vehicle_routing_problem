@@ -5,11 +5,11 @@ import numpy as np
 from numpy import ndarray
 
 
-def n_tournament(population: ndarray, n: int):
+def n_tournaments(population: ndarray, n: int):
     """
     Performing tournament selection in place and in parallel fashion
-    param: population structured 3D array ["individual"]["chromosome]["fitness"]
-    param: n - indicating the size of the tournament
+    param: population - structured 3D array ["individual"]["chromosome]["fitness"]
+    param: n - size of tournaments
     """
 
     # Create a copy of the population to ensure fair tournament to pick competitors from

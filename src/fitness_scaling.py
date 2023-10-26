@@ -8,8 +8,8 @@ def linear():
 
 def power_rank(population: ndarray, exponent: float = 1.005):
     """
-    Combining rank selection and power-scaling for more robust behavior and fast convergence.
-    param: population structured 3D array ["individual"]["chromosome"]["fitness"]
+    Combining rank selection and power-scaling for more robust behavior and fast convergence
+    param: population - structured 3D array ["individual"]["chromosome"]["fitness"]
     param: exponent - control parameter for selection pressure. In literature 1.005 is recommended
     """
 
