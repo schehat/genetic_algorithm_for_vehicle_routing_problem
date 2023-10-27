@@ -6,6 +6,7 @@ import numpy as np
 from FISAGALS import FISAGALS
 from fitness_scaling import power_rank
 from selection import n_tournaments
+from local_search import two_opt
 from vrp import Customer, Depot, VRPInstance
 
 
@@ -89,8 +90,9 @@ if __name__ == "__main__":
     MAX_GENERATIONS = 1000
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
+    LOCAL_SEARCH = two_opt
     tournament_size = 5
-    elitism_percentage = 0.1
+    elitism_percentage = 0.05
 
     # Configure GA and run
     ga = FISAGALS(VRP_INSTANCE,
@@ -100,6 +102,7 @@ if __name__ == "__main__":
                   MAX_GENERATIONS,
                   FITNESS_SCALING,
                   SELECTION_METHOD,
+                  LOCAL_SEARCH,
                   tournament_size=tournament_size,
                   elitism_percentage=elitism_percentage)
     ga.run()

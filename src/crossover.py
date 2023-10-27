@@ -11,7 +11,7 @@ class Crossover:
     """
 
     # Will be set from the GA
-    adaptive_crossover_rate = None
+    adaptive_crossover_rate: float = None
 
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
         self.vrp_instance: VRPInstance = vrp_instance
