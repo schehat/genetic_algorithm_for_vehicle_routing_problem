@@ -23,7 +23,7 @@ def n_tournaments(population: ndarray, n: int):
     def tournament(i):
         # Select the winner based on fitness
         competitors = np.random.choice(len_population, n, replace=False)
-        winner = max(competitors, key=lambda x: population_copy[x]["fitness"])
+        winner = min(competitors, key=lambda x: population_copy[x]["fitness"])
         selected_individual = population_copy[winner]
 
         # Safely increment the counter and update the population

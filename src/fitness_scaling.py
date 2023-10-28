@@ -21,7 +21,7 @@ def power_rank(population: ndarray, exponent: float = 1.005):
     rank = np.arange(len(population))
 
     # Calculate the power of the rank
-    population["fitness"] = (len(population) - rank) ** exponent
+    population["fitness"] = (rank + 1) ** exponent
 
     # Normalize the calculated power fitness
     sum_of_powers = np.sum(population["fitness"])

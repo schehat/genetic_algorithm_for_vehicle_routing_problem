@@ -91,7 +91,7 @@ if __name__ == "__main__":
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH = two_opt
-    tournament_size = 5
+    tournament_size = 1
     elitism_percentage = 0.05
 
     # Configure GA and run

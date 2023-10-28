@@ -68,7 +68,8 @@ class FISAGALS:
         self.best_solution[0]["fitness"] = float("inf")
         # Note after scaling order of fitness reversed: min fitness mapped to max_scaled
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
-                                                                       ("min_scaled", float), ("avg_scaled", float), ("max_scaled", float)]))
+                                                                       ("max_scaled", float), ("avg_scaled", float),
+                                                                       ("min_scaled", float)]))
 
     def run(self):
         """
@@ -99,11 +100,14 @@ class FISAGALS:
             self.fitness_stats[self.generation]["avg_scaled"] = np.mean(self.population["fitness"])
             self.fitness_stats[self.generation]["min_scaled"] = np.min(self.population["fitness"])
 
-            # before starting the parent selection. Save percentage of best individuals
+            # Before starting the parent selection. Save percentage of best individuals
             top_individuals_i = np.argsort(self.population["fitness"])[
                                 :int(self.population_size * self.elitism_percentage)]
             top_individuals = self.population[top_individuals_i]
 
+            # Increasing selection pressure over time by increasing tournament size
+            if self.generation % (self.max_generations * 0.1) == 0:
+                self.tournament_size += 2
             self.selection_method(self.population, self.tournament_size)
             self.do_elitism(top_individuals)
 
@@ -111,9 +115,6 @@ class FISAGALS:
                                  self.vrp_instance.n_depots + self.vrp_instance.n_vehicles + self.vrp_instance.n_customers),
                                 dtype=int)
 
-            # TODO debug
-            if self.generation % 100 == 0:
-                print(1)
             children = self.do_crossover(children)
             children = self.do_mutation(children)
 
@@ -140,13 +141,20 @@ class FISAGALS:
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         if self.best_solution["fitness"] < np.min(self.fitness_stats["min"]):
-            self.fitness_stats[self.generation]["min"] = self.best_solution["fitness"]
+            self.fitness_stats[self.max_generations - 1]["min"] = self.best_solution["fitness"]
 
         plot_fitness(self)
         plot_routes(self, self.best_solution["chromosome"])
         self.log_configuration(self.best_solution)
 
-        print(self.population[min_index]["chromosome"])
+        # self.population[min_index]["chromosome"] = [1, 1, 1, 1, 14, 19, 8, 9, 44, 45, 33, 15, 37, 17, 42, 19, 40, 41,
+        #                                             13, 25, 18, 4,
+        #                                             6, 27, 1, 32, 11, 46, 48, 8, 26, 31, 28, 22, 23, 7, 43, 24, 14, 12,
+        #                                             47,
+        #                                             9, 34, 30, 39, 10, 49, 5, 38,
+        #                                             35, 36, 3, 20, 21, 50, 16, 2, 29]
+        # plot_routes(self, self.population[min_index]["chromosome"])
+        # print(self.evaluate_fitness(self.population[min_index]["chromosome"]))
 
     def generate_initial_population(self):
         """
@@ -330,13 +338,13 @@ class FISAGALS:
 
         for individual in range(0, self.population_size, 2):
             # Adaptive rates for genetic operators
-            min_parent_fitness = max(self.population[individual]["fitness"],
+            min_parent_fitness = min(self.population[individual]["fitness"],
                                      self.population[individual + 1]["fitness"])
-            if min_parent_fitness <= self.fitness_stats[self.generation]["avg_scaled"]:
-                max_parent_fitness = min(self.population[individual]["fitness"],
+            if min_parent_fitness >= self.fitness_stats[self.generation]["avg_scaled"]:
+                max_parent_fitness = max(self.population[individual]["fitness"],
                                          self.population[individual + 1]["fitness"])
-                numerator = min_parent_fitness - self.fitness_stats[self.generation]["max_scaled"]
-                denominator = max_parent_fitness - self.fitness_stats[self.generation]["max_scaled"]
+                numerator = min_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
+                denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
 
                 try:
                     self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
@@ -390,7 +398,7 @@ class FISAGALS:
                        f'\nGenerations: {self.max_generations}'
                        f'\nFitness scaling: {self.fitness_scaling.__name__}'
                        f'\nSelection method: {self.selection_method.__name__}'
-                       f'\nTournament size: {self.tournament_size}'
+                       f'\nAdaptive tournament size: {self.tournament_size}'
                        f'\nElitism: {self.elitism_percentage}'
                        f'\nBest fitness found: {individual["fitness"]:.2f}'
                        f'\nBest chromosome found: ')
