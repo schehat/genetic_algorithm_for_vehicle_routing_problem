@@ -1,4 +1,5 @@
 import random
+from math import floor, ceil
 
 import numpy as np
 
@@ -40,8 +41,8 @@ class Mutation:
         #         chromosome[i] = mutated_value
 
         # Define the range for mutated number of customers
-        min_customer = self.vrp_instance.n_customers * self.minimum_serving_customers_per_vehicle
-        max_customer = self.vrp_instance.n_customers - self.vrp_instance.n_vehicles * min_customer
+        min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 0.7)
+        max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 1.3)
 
         # Iterate through the vehicles and apply uniform mutation
         for i in range(self.START_SECOND_PART, self.START_THIRD_PART):

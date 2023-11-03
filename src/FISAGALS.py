@@ -107,7 +107,7 @@ class FISAGALS:
 
             # Increasing selection pressure over time by increasing tournament size
             if self.generation % (self.max_generations * 0.1) == 0:
-                self.tournament_size += 2
+                self.tournament_size += 1
             self.selection_method(self.population, self.tournament_size)
             self.do_elitism(top_individuals)
 
@@ -164,7 +164,7 @@ class FISAGALS:
         for i in range(self.population_size):
             # Part 1: Number of vehicles for each depot
             depot_vehicle_count = np.zeros(self.vrp_instance.n_depots, dtype=int)
-            for depot_index in range(self.vrp_instance.n_vehicles):
+            for depot_index in range(self.vrp_instance.n_depots):
                 # For now giving every depot 1 vehicle. TODO make dynamic, more interesting when n_vehicles > n_depots
                 # depot_index = np.random.randint(self.vrp_instance.n_depots)
                 # depot_vehicle_count[depot_index] += 1
@@ -335,6 +335,8 @@ class FISAGALS:
         """
 
         EXCEPTION_DIVISOR = 4
+        self.crossover.adaptive_crossover_rate = self.k1
+        self.mutation.adaptive_mutation_rate = self.k2
 
         for individual in range(0, self.population_size, 2):
             # Adaptive rates for genetic operators
@@ -350,8 +352,8 @@ class FISAGALS:
                     self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
                     self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
                 except ZeroDivisionError:
-                    self.crossover.adaptive_crossover_rate = self.k1 / EXCEPTION_DIVISOR
-                    self.mutation.adaptive_mutation_rate = self.k2 / EXCEPTION_DIVISOR
+                    self.crossover.adaptive_crossover_rate = self.k1
+                    self.mutation.adaptive_mutation_rate = self.k2
             else:
                 self.crossover.adaptive_crossover_rate = self.k1
                 self.mutation.adaptive_mutation_rate = self.k2

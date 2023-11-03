@@ -29,14 +29,14 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
     depots = np.zeros((n_depots,), dtype=Depot)
 
     # Read customer data
-    for i, line in enumerate(lines[n_vehicles + 1: n_vehicles + 1 + n_customers]):
+    for i, line in enumerate(lines[n_depots + 1: n_depots + 1 + n_customers]):
         data = line.split()
         if len(data) >= 5:
             customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[4]))
             customers[i] = customer
 
     # Read depot data
-    for i, line in enumerate(lines[n_vehicles + 1 + n_customers:]):
+    for i, line in enumerate(lines[n_depots + 1 + n_customers:]):
         data = line.split()
         if len(data) >= 3:
             # depot id is + n_customers offset, unfavorable in later stages of GA
