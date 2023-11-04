@@ -7,7 +7,7 @@ from numpy import ndarray
 from crossover import Crossover
 from mutation import Mutation
 from plot import plot_fitness, plot_routes
-from purpose import Purpose
+from enums import Purpose
 from vrp import Customer, Depot, VRPInstance
 import datetime
 
@@ -76,7 +76,7 @@ class FISAGALS:
         Execution of FISAGALS
         """
 
-        self.generate_initial_population()
+        self.generate_initial_population_random()
 
         for self.generation in range(self.max_generations):
             # Fitness evaluation
@@ -156,7 +156,7 @@ class FISAGALS:
         # plot_routes(self, self.population[min_index]["chromosome"])
         # print(self.evaluate_fitness(self.population[min_index]["chromosome"]))
 
-    def generate_initial_population(self):
+    def generate_initial_population_random(self):
         """
         Generate random initial population
         """
@@ -164,11 +164,85 @@ class FISAGALS:
         for i in range(self.population_size):
             # Part 1: Number of vehicles for each depot
             depot_vehicle_count = np.zeros(self.vrp_instance.n_depots, dtype=int)
-            for depot_index in range(self.vrp_instance.n_depots):
-                # For now giving every depot 1 vehicle. TODO make dynamic, more interesting when n_vehicles > n_depots
-                # depot_index = np.random.randint(self.vrp_instance.n_depots)
-                # depot_vehicle_count[depot_index] += 1
-                depot_vehicle_count[depot_index] = 1
+
+            # Case 1: every depot gets same amount of vehicles
+            if self.vrp_instance.n_depots <= self.vrp_instance.n_vehicles:
+                vehicle_per_depot = self.vrp_instance.n_vehicles // self.vrp_instance.n_depots
+                for depot_index in range(self.vrp_instance.n_depots):
+                    # For now giving every depot 1 vehicle. TODO make dynamic, more interesting when n_vehicles > n_depots
+                    # depot_index = np.random.randint(self.vrp_instance.n_depots)
+                    # depot_vehicle_count[depot_index] += 1
+                    depot_vehicle_count[depot_index] = vehicle_per_depot
+
+            # Case 2: more vehicles than depots exist. Assign remaining vehicles
+            if self.vrp_instance.n_depots != self.vrp_instance.n_vehicles:
+                remaining_vehicles = self.vrp_instance.n_vehicles % self.vrp_instance.n_depots
+                extra_vehicle_depots = np.random.choice(self.vrp_instance.n_depots, size=remaining_vehicles, replace=False)
+                for depot_index in extra_vehicle_depots:
+                    depot_vehicle_count[depot_index] += 1
+
+            # Part 2: Number of customers for each vehicle
+            vehicle_customer_count = np.zeros(self.vrp_instance.n_vehicles, dtype=int)
+            total_customers_assigned = 0
+            avg_customers_per_vehicle = self.vrp_instance.n_customers / self.vrp_instance.n_vehicles
+            std_deviation = 1.0
+
+            # One additional loop to guarantee all customers are assigned to vehicles, relevant in else block
+            for vehicle_index in range(self.vrp_instance.n_vehicles + 1):
+                # Calculate the maximum number of customers that can be assigned to this vehicle
+                max_customers = self.vrp_instance.n_customers - total_customers_assigned
+                if max_customers < 1:
+                    break
+
+                # Excluding the additional loop
+                if vehicle_index < self.vrp_instance.n_vehicles:
+                    # Generate a random number of customers for this vehicle using a Gaussian distribution
+                    # centered around the avg_customers_per_vehicle
+                    num_customers = int(np.random.normal(loc=avg_customers_per_vehicle, scale=std_deviation))
+                    # Ensure it's within valid bounds
+                    num_customers = max(1, min(max_customers, num_customers))
+                    vehicle_customer_count[vehicle_index] = num_customers
+                else:
+                    # If all vehicles assigned and customers remain, assign the rest to random vehicle
+                    num_customers = max_customers
+                    vehicle_index = np.random.randint(self.vrp_instance.n_vehicles)
+                    vehicle_customer_count[vehicle_index] += num_customers
+
+                total_customers_assigned += num_customers
+
+            # Part 3: Random order of customers for each vehicle
+            order_of_customers = np.random.permutation(np.arange(1, self.vrp_instance.n_customers + 1))
+
+            # Combine the three parts to form a chromosome
+            chromosome = np.concatenate((depot_vehicle_count, vehicle_customer_count, order_of_customers))
+            self.population[i]["individual"] = i
+            self.population[i]["chromosome"] = chromosome
+
+    def generate_initial_population_h1(self):
+        """
+        Generate random initial population
+        1. group
+        """
+
+        for i in range(self.population_size):
+            # Part 1: Number of vehicles for each depot
+            depot_vehicle_count = np.zeros(self.vrp_instance.n_depots, dtype=int)
+
+            # Case 1: every depot gets same amount of vehicles
+            if self.vrp_instance.n_depots <= self.vrp_instance.n_vehicles:
+                vehicle_per_depot = self.vrp_instance.n_vehicles // self.vrp_instance.n_depots
+                for depot_index in range(self.vrp_instance.n_depots):
+                    # For now giving every depot 1 vehicle. TODO make dynamic, more interesting when n_vehicles > n_depots
+                    # depot_index = np.random.randint(self.vrp_instance.n_depots)
+                    # depot_vehicle_count[depot_index] += 1
+                    depot_vehicle_count[depot_index] = vehicle_per_depot
+
+            # Case 2: more or less vehicles than depots. Assign remaining vehicles
+            if self.vrp_instance.n_depots < self.vrp_instance.n_vehicles:
+                remaining_vehicles = self.vrp_instance.n_vehicles % self.vrp_instance.n_depots
+                extra_vehicle_depots = np.random.choice(self.vrp_instance.n_depots, size=remaining_vehicles, replace=False)
+                for depot_index in extra_vehicle_depots:
+                    depot_vehicle_count[depot_index] += 1
 
             # Part 2: Number of customers for each vehicle
             vehicle_customer_count = np.zeros(self.vrp_instance.n_vehicles, dtype=int)
@@ -334,7 +408,6 @@ class FISAGALS:
         return: children - 1D array of the generation holding chromosome information
         """
 
-        EXCEPTION_DIVISOR = 4
         self.crossover.adaptive_crossover_rate = self.k1
         self.mutation.adaptive_mutation_rate = self.k2
 

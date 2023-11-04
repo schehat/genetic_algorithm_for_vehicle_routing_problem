@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy import ndarray
 
-from purpose import Purpose
+from enums import Purpose
 from vrp import Depot, Customer
 
 
@@ -46,7 +46,8 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
     param: width and height - size of figure
     """
 
-    colors = ["red", "cyan", "magenta", "orange"]
+    colors = ["salmon", "gold", "lightgreen", "mediumslateblue", "indianred", "orange", "limegreen", "deepskyblue",
+              "yellow", "turquoise", "dodgerblue", "violet", "peru", "springgreen", "steelblue", "crimson"]
     route_data = []
 
     def collect_routes(obj, from_vehicle_i):
@@ -58,7 +59,7 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
 
         # use route_data declared above
         nonlocal route_data
-        # Ensure there's an entry for the vehicle, and initialize it if not present
+        # Create empty entry for the vehicle
         while len(route_data) <= from_vehicle_i:
             route_data.append({'x_pos': [], 'y_pos': [], 'customer_ids': []})
 
@@ -111,6 +112,39 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
         save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_vehicle_{vehicle_index + 1}")
 
         plt.show()
+
+    plt.figure(figsize=(width, height))
+    # plot depots
+    for index in range(ga.vrp_instance.n_depots):
+        depot: Depot = ga.vrp_instance.depots[index]
+        plt.scatter(depot.x, depot.y, s=150, color=colors[index], edgecolor='black', label=f'Depot {index + 1}',
+                    zorder=2)
+    # Plot for every vehicle it routes
+    for vehicle_index in range(ga.vrp_instance.n_vehicles):
+        # Plot routes
+        x_pos = route_data[vehicle_index]["x_pos"]
+        y_pos = route_data[vehicle_index]["y_pos"]
+        customer_ids = route_data[vehicle_index]["customer_ids"]
+        plt.plot(x_pos, y_pos, marker='o', color=colors[vehicle_index], zorder=1)
+
+        # Add customer ids and order of iteration as labels to the plot
+        for j in range(len(x_pos)):
+            plt.text(x_pos[j], y_pos[j], customer_ids[j], fontsize=8, ha='right')
+            if j < len(x_pos) - 1:
+                mid_x = (x_pos[j] + x_pos[j + 1]) / 2
+                mid_y = (y_pos[j] + y_pos[j + 1]) / 2
+                plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
+                         bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
+
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title(f'Routes Visualization Complete')
+    plt.grid(True)
+    plt.legend()
+
+    save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_complete")
+
+    plt.show()
 
 
 def save_plot(plotting: matplotlib.pyplot, location: str, file_name: str):

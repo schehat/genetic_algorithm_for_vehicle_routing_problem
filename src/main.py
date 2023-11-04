@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import numpy as np
 
 from FISAGALS import FISAGALS
@@ -80,14 +79,14 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p01"
+    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p04"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 1000
+    MAX_GENERATIONS = 200
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH = two_opt
