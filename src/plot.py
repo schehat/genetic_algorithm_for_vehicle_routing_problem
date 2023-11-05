@@ -7,15 +7,16 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 from enums import Purpose
+from GA import GA
 from vrp import Depot, Customer
 
 
-def plot_fitness(ga, width=8, height=6, interval=50):
+def plot_fitness(ga: GA, width=8, height=6, interval=50):
     """
     Plot data points for minimum and average fitness values over generations at given intervals
     param: ga - genetic algorithm
     param: width and height - size of figure
-    interval: entries between data point plots
+    param: interval - entries between data point plots
     """
     plt.figure(figsize=(width, height))
 
@@ -38,11 +39,11 @@ def plot_fitness(ga, width=8, height=6, interval=50):
     plt.show()
 
 
-def plot_routes(ga, chromosome: ndarray, width=8, height=6):
+def plot_routes(ga, individual: ndarray, width=12, height=10):
     """
     Plot the routes for a given chromosome solution
     param: ga - genetic algorithm
-    param: chromosome - the best solution
+    param: chromosome - structured 3D element ["individual"]["chromosome]["fitness"]
     param: width and height - size of figure
     """
 
@@ -76,10 +77,11 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
             print("ERROR: unexpected behavior")
 
     # While decoding chromosome use collect_routes
-    ga.decode_chromosome(chromosome, Purpose.PLOTTING, collect_routes)
+    ga.decode_chromosome(individual, Purpose.PLOTTING, collect_routes)
 
-    # Plot for every vehicle it routes
-    for vehicle_index in range(ga.vrp_instance.n_vehicles):
+    # Plot for every depot it routes
+    color_index = 0
+    for depot_index in range(ga.vrp_instance.n_depots):
         plt.figure(figsize=(width, height))
 
         # plot depots
@@ -89,10 +91,22 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
                         zorder=2)
 
         # Plot routes
-        x_pos = route_data[vehicle_index]["x_pos"]
-        y_pos = route_data[vehicle_index]["y_pos"]
-        customer_ids = route_data[vehicle_index]["customer_ids"]
-        plt.plot(x_pos, y_pos, marker='o', color=colors[vehicle_index], zorder=1)
+        depot = ga.vrp_instance.depots[depot_index]
+        x_pos = route_data[depot_index]["x_pos"]
+        y_pos = route_data[depot_index]["y_pos"]
+        customer_ids = route_data[depot_index]["customer_ids"]
+
+        # Initialize variables to track the current route
+        start = 0
+        # start loop from 1 to exclude depot
+        for j in range(1, len(x_pos)):
+            # Start a new route with a new color
+            if x_pos[j] == depot.x and y_pos[j] == depot.y:
+                # Plot the current route
+                plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
+                color_index += 1
+                # Should point to depot
+                start = j
 
         # Add customer ids and order of iteration as labels to the plot
         for j in range(len(x_pos)):
@@ -105,11 +119,11 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
 
         plt.xlabel('X Coordinate')
         plt.ylabel('Y Coordinate')
-        plt.title(f'Routes Visualization Vehicle {vehicle_index + 1}')
+        plt.title(f'Routes Visualization Vehicle {depot_index + 1}')
         plt.grid(True)
         plt.legend()
 
-        save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_vehicle_{vehicle_index + 1}")
+        save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_vehicle_{depot_index + 1}")
 
         plt.show()
 
@@ -119,13 +133,27 @@ def plot_routes(ga, chromosome: ndarray, width=8, height=6):
         depot: Depot = ga.vrp_instance.depots[index]
         plt.scatter(depot.x, depot.y, s=150, color=colors[index], edgecolor='black', label=f'Depot {index + 1}',
                     zorder=2)
+
     # Plot for every vehicle it routes
-    for vehicle_index in range(ga.vrp_instance.n_vehicles):
+    color_index = 0
+    for depot_index in range(ga.vrp_instance.n_depots):
         # Plot routes
-        x_pos = route_data[vehicle_index]["x_pos"]
-        y_pos = route_data[vehicle_index]["y_pos"]
-        customer_ids = route_data[vehicle_index]["customer_ids"]
-        plt.plot(x_pos, y_pos, marker='o', color=colors[vehicle_index], zorder=1)
+        depot = ga.vrp_instance.depots[depot_index]
+        x_pos = route_data[depot_index]["x_pos"]
+        y_pos = route_data[depot_index]["y_pos"]
+        customer_ids = route_data[depot_index]["customer_ids"]
+
+        # Initialize variables to track the current route
+        start = 0
+        # start loop from 1 to exclude depot
+        for j in range(1, len(x_pos)):
+            # Start a new route with a new color
+            if x_pos[j] == depot.x and y_pos[j] == depot.y:
+                # Plot the current route
+                plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
+                color_index += 1
+                # Should point to depot
+                start = j
 
         # Add customer ids and order of iteration as labels to the plot
         for j in range(len(x_pos)):

@@ -1,16 +1,13 @@
-import numpy as np
 from numpy import ndarray
 
-from vrp import VRPInstance
+from GA import GA
 
 
-def linear(self):
-    pass
-
-
-def two_opt(ga: any, individual: ndarray):
+def two_opt(ga: GA, individual: ndarray):
     """
-    TODO
+    Applies two opt in place
+    param: ga - genetic algorithm
+    param: individual - structured 3D element ["individual"]["chromosome]["fitness"]
     """
 
     best_route = individual["chromosome"]
@@ -23,12 +20,12 @@ def two_opt(ga: any, individual: ndarray):
         for j in range(i + 3, len(best_route) - 1):
 
             # (i, i+1) and (j, j+1)
-            edge_i = best_route[i:i+2]
-            edge_j = best_route[j:j+2]
+            edge_i = best_route[i:i + 2]
+            edge_j = best_route[j:j + 2]
 
             new_route = best_route.copy()
             # reconnecting i -> j and i+1 -> j+1 by swapping i+1 and j
-            new_route[i+1] = edge_j[0]
+            new_route[i + 1] = edge_j[0]
             new_route[j] = edge_i[1]
 
             new_fitness = ga.evaluate_fitness(new_route)
