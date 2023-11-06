@@ -61,7 +61,6 @@ def initial_population_grouping_savings_nnh(ga: GA):
         # 1. grouping
         links_type = np.dtype([("customer_order", object)])
         links = np.zeros(ga.vrp_instance.n_depots, dtype=links_type)
-
         # Initialize the customer order lists for each depot
         links["customer_order"] = [[] for _ in range(ga.vrp_instance.n_depots)]
 
@@ -70,10 +69,10 @@ def initial_population_grouping_savings_nnh(ga: GA):
         # 1. part: Calculate the number of customers for each depot
         depot_customer_count = np.array([len(link[0]) for link in links], dtype=int)
 
-        # 2. part: Flatten the lists to get the order of customers
-        order_of_customers = np.concatenate([link[0] for link in links])
+        # 2. part: calculate savings
         # wright_clark_savings(ga, links)
-        # order_of_customers = np.concatenate([link[0] for link in links])
+        # Flatten the lists to get the order of customers
+        order_of_customers = np.concatenate([link[0] for link in links])
 
         # Combine the two parts to form a chromosome
         chromosome = np.concatenate((depot_customer_count, order_of_customers))
@@ -103,31 +102,46 @@ def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
         links["customer_order"][closest_depot_index].append(customer.id)
 
 
-# def wright_clark_savings(self, depot_customer_order: list):
-#     """
-#         Apply Wright and Clark savings method to reorder customers in-place.
-#         param: depot_customer_order - a list containing customer indices for each depot.
-#         """
-#     for depot_orders in depot_customer_order:
-#         # Create a list of customer pairs and their corresponding savings
-#         savings = []
-#         for i in range(len(depot_orders)):
-#             for j in range(i + 1, len(depot_orders)):
-#                 customer_i, customer_j = depot_orders[i], depot_orders[j]
-#                 distance_i_j = euclidean(
-#                     (self.vrp_instance.customers[customer_i].x, self.vrp_instance.customers[customer_i].y),
-#                     (self.vrp_instance.customers[customer_j].x, self.vrp_instance.customers[customer_j].y)
-#                 )
-#                 savings.append((customer_i, customer_j, distance_i_j))
-#
-#         # Sort the savings list by descending order of savings
-#         savings.sort(key=lambda x: x[2], reverse=True)
-#
-#         # Reorder customers based on the savings method
-#         new_order = []
-#         for customer_i, customer_j, _ in savings:
-#             if customer_i not in new_order and customer_j not in new_order:
-#                 new_order.extend([customer_i, customer_j])
-#
-#         # Update the depot_orders with the new order of customers
-#         depot_orders[:] = new_order
+def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray):
+    # TODO use matrix instead and follow normal procedure for correct implementation
+    for depot_index, depot_orders in enumerate(depot_customer_order):
+        # Create a list of customer pairs and their corresponding savings
+        savings = []
+        for i in range(len(depot_orders[0])):
+            for j in range(len(depot_orders[0])):
+                # No need to calculate savings from customer to customer
+                if i == j:
+                    continue
+                depot = ga.vrp_instance.depots[depot_index]
+                # -1 because id starts at 1 but indexing at 0
+                customer_i_id = depot_orders[0][i]
+                customer_j_id = depot_orders[0][j]
+                customer_i = ga.vrp_instance.customers[customer_i_id - 1]
+                customer_j = ga.vrp_instance.customers[customer_j_id - 1]
+
+                distance_d_i = euclidean(
+                    (depot.x, depot.y),
+                    (customer_i.x, customer_i.y)
+                )
+                distance_d_j = euclidean(
+                    (depot.x, depot.y),
+                    (customer_j.x, customer_j.y)
+                )
+                distance_i_j = euclidean(
+                    (customer_i.x, customer_i.y),
+                    (customer_j.x, customer_j.y)
+                )
+                savings.append((depot_orders[0][i], depot_orders[0][j], distance_d_i + distance_d_j - distance_i_j))
+
+        # Sort the savings list by descending order of savings
+        savings.sort(key=lambda x: x[2], reverse=True)
+
+        # Reorder customers based on the savings method
+        new_order = []
+        capacity = 0
+        for customer_i, customer_j, _ in savings:
+            if customer_i not in new_order and customer_j not in new_order and capacity + ga.vrp_instance.customers[i] + ga.vrp_instance.customers[i] > ga.vrp_instance.max_capacity:
+                new_order.extend([customer_i, customer_j])
+
+        # Update the depot_orders with the new order of customers
+        depot_orders[:] = new_order
