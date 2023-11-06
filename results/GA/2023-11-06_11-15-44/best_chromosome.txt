@@ -1,0 +1,8 @@
+Population size: 100
+Generations: 1000
+Fitness scaling: power_rank
+Selection method: n_tournaments
+Adaptive tournament size: 11
+Elitism: 0.05
+Best fitness found: 1277.20
+Best chromosome found: 54 46 14 38 22 74 25 55 4 21 37 44 91 85 59 40 39 67 23 41 15 57 75 56 24 54 72 73 87 95 93 92 42 43 2 100 86 16 98 6 89 94 58 53 12 26 97 99 60 5 84 45 17 61 96 13 27 28 33 51 9 66 70 76 77 29 34 35 78 79 3 1 20 32 90 11 64 63 62 50 68 80 18 7 88 47 49 36 46 82 52 69 31 83 8 48 19 10 30 65 71 81 

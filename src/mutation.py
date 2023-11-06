@@ -31,10 +31,16 @@ class Mutation:
         # Define the range for mutated number of customers
         min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 0.5)
         max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 1.5)
+        # mutation_range = 2
 
         # Iterate through the vehicles and apply uniform mutation
         for i in range(self.vrp_instance.n_depots):
             if random.random() <= self.MUTATION_RATE:
+                # mutated_value = np.random.randint(1, mutation_range + 1)
+                # mutated_value *= np.random.choice([-1, 1])
+                # if min_customer <= chromosome[i] + mutated_value <= max_customer:
+                #     chromosome[i] += mutated_value
+
                 mutated_value = np.random.randint(min_customer, max_customer + 1)
                 chromosome[i] = mutated_value
 

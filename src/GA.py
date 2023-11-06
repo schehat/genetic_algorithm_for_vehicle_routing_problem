@@ -15,12 +15,11 @@ class GA:
     """
     - Fitness-scaling adaptive genetic algorithm with local search
     - Chromosome representation specific integer string consisting of three parts:
-        1. Number of vehicles for each depot
-        1. Number of customers for each vehicle to serve
-        3. The order of customers for each vehicle to serve
-        E.g. for 2 depots with 3 vehicles and 7 customers (2, 1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 7)
-        => first depot (index 0) has 2 vehicles, first vehicle (index 2) serves customer 1 and 2 (index 5 and 6)
-        => second depot (Index 1) has 1 vehicles (index 2), serving customer 6 and 7 (index 10, 11)
+        1. Number of customers for each depot
+        2. The order of customers for each vehicle to serve
+        E.g. for 2 depots and 7 customers (5, 2, 1, 2, 3, 4, 5, 6, 7)
+        => first depot (index 0) has 5 customers, serving customers 1 - 5
+        => second depot (Index 1) has 2 customers, serving customer 6 and 7
     """
 
     THRESHOLD = 200
@@ -32,6 +31,7 @@ class GA:
                  crossover_rate: float,
                  mutation_rate: float,
                  max_generations: int,
+                 initial_population: Callable[[any], None],  # any => GA
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search,
@@ -49,6 +49,7 @@ class GA:
         self.crossover = Crossover(self.vrp_instance, crossover_rate)
         self.mutation = Mutation(self.vrp_instance, mutation_rate)
         self.max_generations = max_generations
+        self.initial_population = initial_population
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, int], ndarray] = selection_method
         self.local_search = local_search
@@ -77,7 +78,7 @@ class GA:
         Execution of FISAGALS
         """
 
-        initial_random_population(self)
+        self.initial_population(self)
 
         for self.generation in range(self.max_generations):
             # Fitness evaluation
@@ -208,6 +209,8 @@ class GA:
 
                 # Check if next customer exists in route
                 if j < depot_i_n_customers - 1:
+                    if customer_index + j + 1 >= 54:
+                        print(1)
                     customer_value2 = chromosome[customer_index + j + 1]
                     customer_2: Customer = self.vrp_instance.customers[customer_value2 - 1]
 
@@ -332,5 +335,4 @@ class GA:
             np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
 
 
-from initial_population import initial_random_population
 from plot import plot_fitness, plot_routes
