@@ -33,3 +33,8 @@ def two_opt(ga: GA, individual: ndarray):
             if new_fitness < individual["fitness"]:
                 best_route = new_route
                 individual["fitness"] = new_fitness
+
+
+# TODO
+def isp():
+    pass

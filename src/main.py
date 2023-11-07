@@ -80,7 +80,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p01"
+    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p04"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH = two_opt
-    tournament_size = 1
+    tournament_size = 3
     elitism_percentage = 0.05
 
     # Configure GA and run

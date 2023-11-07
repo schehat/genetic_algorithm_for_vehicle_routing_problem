@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from numpy import ndarray
 
@@ -63,19 +65,22 @@ def initial_population_grouping_savings_nnh(ga: GA):
         links = np.zeros(ga.vrp_instance.n_depots, dtype=links_type)
         # Initialize the customer order lists for each depot
         links["customer_order"] = [[] for _ in range(ga.vrp_instance.n_depots)]
-
         assign_customers_to_closest_depots(ga, links)
-
-        # 1. part: Calculate the number of customers for each depot
         depot_customer_count = np.array([len(link[0]) for link in links], dtype=int)
 
-        # 2. part: calculate savings
-        # wright_clark_savings(ga, links)
+        # 2. routing
+        routing_result = []
+        wright_clark_savings(ga, links, routing_result)
+
+        # 3. grouping
+        nearest_neighbor_heuristic(ga, routing_result)
+
         # Flatten the lists to get the order of customers
-        order_of_customers = np.concatenate([link[0] for link in links])
+        routing_result = [customer for depot_list in routing_result for route_list in depot_list for customer in
+                          route_list]
 
         # Combine the two parts to form a chromosome
-        chromosome = np.concatenate((depot_customer_count, order_of_customers))
+        chromosome = np.concatenate((depot_customer_count, routing_result))
 
         ga.population[i]["individual"] = i
         ga.population[i]["chromosome"] = chromosome
@@ -102,20 +107,21 @@ def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
         links["customer_order"][closest_depot_index].append(customer.id)
 
 
-def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray):
-    # TODO use matrix instead and follow normal procedure for correct implementation
+def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray, routing_result: list):
+    # TODO: return result
     for depot_index, depot_orders in enumerate(depot_customer_order):
         # Create a list of customer pairs and their corresponding savings
-        savings = []
-        for i in range(len(depot_orders[0])):
-            for j in range(len(depot_orders[0])):
-                # No need to calculate savings from customer to customer
-                if i == j:
-                    continue
+        n_customers = len(depot_orders[0])
+        savings_type = [('customer1', int), ('customer2', int), ('saving', float)]
+        savings_list = np.empty((n_customers * (n_customers - 1) // 2,), dtype=savings_type)
+        # Initialize the index for savings_list
+        k = 0
+        for i in range(n_customers):
+            for j in range(i + 1, n_customers):
                 depot = ga.vrp_instance.depots[depot_index]
-                # -1 because id starts at 1 but indexing at 0
                 customer_i_id = depot_orders[0][i]
                 customer_j_id = depot_orders[0][j]
+                # -1 because id starts at 1 but indexing at 0
                 customer_i = ga.vrp_instance.customers[customer_i_id - 1]
                 customer_j = ga.vrp_instance.customers[customer_j_id - 1]
 
@@ -131,17 +137,108 @@ def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray):
                     (customer_i.x, customer_i.y),
                     (customer_j.x, customer_j.y)
                 )
-                savings.append((depot_orders[0][i], depot_orders[0][j], distance_d_i + distance_d_j - distance_i_j))
+                saving = distance_d_i + distance_d_j - distance_i_j
 
-        # Sort the savings list by descending order of savings
-        savings.sort(key=lambda x: x[2], reverse=True)
+                # Update savings_list
+                savings_list['customer1'][k] = i
+                savings_list['customer2'][k] = j
+                savings_list['saving'][k] = saving
+                k += 1
 
-        # Reorder customers based on the savings method
-        new_order = []
-        capacity = 0
-        for customer_i, customer_j, _ in savings:
-            if customer_i not in new_order and customer_j not in new_order and capacity + ga.vrp_instance.customers[i] + ga.vrp_instance.customers[i] > ga.vrp_instance.max_capacity:
-                new_order.extend([customer_i, customer_j])
+        # Sort savings in descending order.
+        sorted_indices = np.argsort(-savings_list['saving'])
+        savings_list = savings_list[sorted_indices]
 
-        # Update the depot_orders with the new order of customers
-        depot_orders[:] = new_order
+        # Initialize routes for each customer.
+        routes = [[i] for i in range(n_customers)]
+        cumulative_demand = [ga.vrp_instance.customers[depot_orders[0][i] - 1].demand for i in range(n_customers)]
+
+        # Merge routes based on savings while respecting capacity constraints
+        for (i, j, saving) in savings_list:
+            route_i, route_j = routes[i], routes[j]
+
+            # Because customers may already are in a route and a route has more than 2 customers
+            # for more flexibility interchange from where which route is appending by separate pointers
+            route_index = None
+            route_to_insert = None
+
+            # Both customers already used in a route
+            if not route_i and not route_j:
+                continue
+
+            # Route_i already used then need to append route_j in the route where route_i is
+            if not route_i:
+                for index, route in enumerate(routes):
+                    if i in route:
+                        route_index = index
+                        break
+
+                # If j already where i is then continue
+                if j in routes[route_index]:
+                    continue
+
+                route_to_insert = j
+
+            # Route_j already used then need to append route_i in the route where route_j is
+            elif not route_j:
+                route_index = None
+                for index, route in enumerate(routes):
+                    if j in route:
+                        route_index = index
+                        break
+
+                # If i already where j is then continue
+                if i in routes[route_index]:
+                    continue
+
+                route_to_insert = i
+
+            # normal case: appending j to i
+            else:
+                route_index = i
+                route_to_insert = j
+
+            if cumulative_demand[route_index] + cumulative_demand[route_to_insert] <= ga.vrp_instance.max_capacity:
+                # Merge the two routes by adding the second customer's route to the first customer's route.
+                routes[route_index] += routes[route_to_insert]
+                # Update cumulative demand for the merged route.
+                cumulative_demand[route_index] += cumulative_demand[route_to_insert]
+                # Mark the second customer's route as used.
+                routes[route_to_insert] = []
+                cumulative_demand[route_to_insert] = 0
+
+        # Filter out the empty routes, leaving only the non-empty merged routes.
+        routes = [route for route in routes if route]
+        # Replace indexes to customers by there ids
+        for route in routes:
+            for i in range(len(route)):
+                route[i] = depot_orders[0][route[i]]
+        routing_result.append(routes)
+
+
+def nearest_neighbor_heuristic(ga: GA, routing_result: list):
+    for depot_routes in routing_result:
+        for route in depot_routes:
+            if len(route) >= 2:
+                # Randomly select a customer from the route
+                selected_customer = random.choice(route)
+                # Copy the route and start with the selected customer
+                new_route = [selected_customer]
+                route.remove(selected_customer)
+
+                while route:
+                    # Find the nearest neighbor to the last customer in the new route
+                    last_customer = new_route[-1]
+                    nearest_neighbor = min(route, key=lambda customer_id: euclidean(
+                        (
+                            ga.vrp_instance.customers[last_customer - 1].x,
+                            ga.vrp_instance.customers[last_customer - 1].y),
+                        (
+                            ga.vrp_instance.customers[customer_id - 1].x,
+                            ga.vrp_instance.customers[customer_id - 1].y)
+                    ))
+                    new_route.append(nearest_neighbor)
+                    route.remove(nearest_neighbor)
+
+                # Replace the original route with the new ordered route
+                depot_routes[depot_routes.index(route)] = new_route

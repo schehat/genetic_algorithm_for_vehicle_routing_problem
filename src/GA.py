@@ -38,8 +38,8 @@ class GA:
                  tournament_size: int = 5,
                  tournament_size_increment: int = 1,
                  elitism_percentage: float = 0.1,
-                 k1: float = 1.0,
-                 k2: float = 0.5):
+                 k1: float = 0.9,
+                 k2: float = 0.4):
         """
             param: k1 and k2 - control rates for adaptive genetic operators
         """
@@ -171,6 +171,7 @@ class GA:
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose, operation: any):
         """
+        TODO: smarteres splitten
         Decoding chromosome by traversing the genes considering constraints and fetching the routes.
         Expecting a purpose to evaluate which operation should be used
         param: chromosome - 1D array
@@ -209,8 +210,6 @@ class GA:
 
                 # Check if next customer exists in route
                 if j < depot_i_n_customers - 1:
-                    if customer_index + j + 1 >= 54:
-                        print(1)
                     customer_value2 = chromosome[customer_index + j + 1]
                     customer_2: Customer = self.vrp_instance.customers[customer_value2 - 1]
 
@@ -266,25 +265,27 @@ class GA:
         return: children - 1D array of the generation holding chromosome information
         """
 
+        self.crossover.adaptive_crossover_rate = self.k1
+        self.mutation.adaptive_mutation_rate = self.k2
         for individual in range(0, self.population_size, 2):
-            # Adaptive rates for genetic operators
-            min_parent_fitness = min(self.population[individual]["fitness"],
-                                     self.population[individual + 1]["fitness"])
-            if min_parent_fitness >= self.fitness_stats[self.generation]["avg_scaled"]:
-                max_parent_fitness = max(self.population[individual]["fitness"],
-                                         self.population[individual + 1]["fitness"])
-                numerator = min_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
-                denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
-
-                try:
-                    self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
-                    self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
-                except ZeroDivisionError:
-                    self.crossover.adaptive_crossover_rate = self.k1
-                    self.mutation.adaptive_mutation_rate = self.k2
-            else:
-                self.crossover.adaptive_crossover_rate = self.k1
-                self.mutation.adaptive_mutation_rate = self.k2
+            #     # Adaptive rates for genetic operators
+            #     min_parent_fitness = min(self.population[individual]["fitness"],
+            #                              self.population[individual + 1]["fitness"])
+            #     if min_parent_fitness >= self.fitness_stats[self.generation]["avg_scaled"]:
+            #         max_parent_fitness = max(self.population[individual]["fitness"],
+            #                                  self.population[individual + 1]["fitness"])
+            #         numerator = min_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
+            #         denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
+            #
+            #         try:
+            #             self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
+            #             self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+            #         except ZeroDivisionError:
+            #             self.crossover.adaptive_crossover_rate = self.k1
+            #             self.mutation.adaptive_mutation_rate = self.k2
+            #     else:
+            #         self.crossover.adaptive_crossover_rate = self.k1
+            #         self.mutation.adaptive_mutation_rate = self.k2
 
             # Generate 2 children by swapping parents in argument of crossover operation
             children[individual] = self.crossover.order(

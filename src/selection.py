@@ -34,3 +34,20 @@ def n_tournaments(population: ndarray, n: int):
     # Parallelization step calling tournament
     with ThreadPoolExecutor() as executor:
         list(executor.map(tournament, range(len_population)))
+
+
+# TODO
+def fitness_proportionate_selection():
+    pass
+
+
+def stochastic_universal_sampling():
+    pass
+
+
+def linear_rank_selection():
+    pass
+
+
+def power_rank_selection():
+    pass
