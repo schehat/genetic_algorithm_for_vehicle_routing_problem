@@ -23,7 +23,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
     # Parse the first line to get instance information
     header = lines[0].split()
     n_vehicles, n_customers, n_depots = map(int, header[1:4])
-    max_capacity = int(lines[1].split()[1])
+    max_duration_route, max_capacity = map(int, lines[1].split())
 
     customers = np.zeros((n_customers,), dtype=Customer)
     depots = np.zeros((n_depots,), dtype=Depot)
@@ -32,7 +32,8 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
     for i, line in enumerate(lines[n_depots + 1: n_depots + 1 + n_customers]):
         data = line.split()
         if len(data) >= 5:
-            customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[4]))
+            customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[3]),
+                                int(data[4]), int(data[-2]), int(data[-1]))
             customers[i] = customer
 
     # Read depot data
@@ -40,10 +41,10 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
         data = line.split()
         if len(data) >= 3:
             # depot id is + n_customers offset, unfavorable in later stages of GA
-            depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]))
+            depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[-2]), int(data[-1]))
             depots[i] = depot
 
-    return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots)
+    return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route)
 
 
 # def test_operators():
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p04"
+    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p01"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters

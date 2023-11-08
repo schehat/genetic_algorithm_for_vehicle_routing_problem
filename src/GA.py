@@ -13,8 +13,8 @@ import datetime
 
 class GA:
     """
-    - Fitness-scaling adaptive genetic algorithm with local search
-    - Chromosome representation specific integer string consisting of three parts:
+    - Hybrid genetic algorithm with heuristics and local search
+    - Chromosome representation specific integer string consisting of two parts:
         1. Number of customers for each depot
         2. The order of customers for each vehicle to serve
         E.g. for 2 depots and 7 customers (5, 2, 1, 2, 3, 4, 5, 6, 7)
@@ -64,14 +64,23 @@ class GA:
             ("chromosome", int,
              (self.vrp_instance.n_depots + self.vrp_instance.n_customers,)),
             ("fitness", float),
+            ("distance", float),
+            ("timeout", float)
         ])
         self.population = np.zeros(self.population_size, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
         # Note after scaling order of fitness reversed: min fitness mapped to max_scaled
+
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
                                                                        ("max_scaled", float), ("avg_scaled", float),
                                                                        ("min_scaled", float)]))
+        # Total for one individual not the total of all individuals
+        self.total_fitness = 0.0
+        self.total_distance = 0.0
+        self.total_timeout = 0
+
+        self.route_data = []
 
     def run(self):
         """
@@ -83,7 +92,10 @@ class GA:
         for self.generation in range(self.max_generations):
             # Fitness evaluation
             for i, chromosome in enumerate(self.population["chromosome"]):
-                self.population[i]["fitness"] = self.evaluate_fitness(chromosome)
+                self.decode_chromosome(chromosome, Purpose.FITNESS)
+                self.population[i]["fitness"] = self.total_fitness
+                self.population[i]["distance"] = self.total_distance
+                self.population[i]["timeout"] = self.total_timeout
 
             # Save statistics about raw fitness
             self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
@@ -131,8 +143,8 @@ class GA:
         # get best individual
         self.local_search(self, self.best_solution)
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        if self.best_solution["fitness"] < np.min(self.fitness_stats["min"]):
-            self.fitness_stats[self.max_generations - 1]["min"] = self.best_solution["fitness"]
+        # if self.best_solution["fitness"] < np.min(self.fitness_stats["min"]):
+        #     self.fitness_stats[self.max_generations - 1]["min"] = self.best_solution["fitness"]
 
         plot_fitness(self)
         plot_routes(self, self.best_solution["chromosome"])
@@ -147,29 +159,7 @@ class GA:
         # plot_routes(self, self.population[0]["chromosome"])
         # print(self.evaluate_fitness(self.population[0]["chromosome"]))
 
-    def evaluate_fitness(self, chromosome: ndarray) -> float:
-        """
-        Calculate fitness for a single chromosome
-        param: chromosome - 1D array holding genetic information
-        """
-
-        # Fitness is considered the total distance traveled
-        total_fitness = 0.0
-
-        def add_fitness(obj1, obj2):
-            """
-            param: obj1 and obj2 - Customers or Depots
-            """
-            # use total_fitness declared above
-            nonlocal total_fitness
-            total_fitness += np.linalg.norm(
-                np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
-
-        # While decoding chromosome use add_fitness
-        self.decode_chromosome(chromosome, Purpose.FITNESS, add_fitness)
-        return total_fitness
-
-    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose, operation: any):
+    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
         """
         TODO: smarteres splitten
         Decoding chromosome by traversing the genes considering constraints and fetching the routes.
@@ -181,12 +171,16 @@ class GA:
         """
 
         customer_index = self.vrp_instance.n_depots
+        self.total_fitness = 0.0
+        self.total_distance = 0.0
+        self.total_timeout = 0
+        current_distance_duration = 0
+        current_service_duration = 0
 
         for depot_index in range(self.vrp_instance.n_depots):
             depot_i_n_customers = chromosome[depot_index]
             # Capacity for every vehicle the same at the moment. TODO dynamic capacity with vehicle class
             vehicle_i_capacity = 0
-
             vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
 
             for j in range(depot_i_n_customers):
@@ -198,15 +192,15 @@ class GA:
                 if j == 0:
                     # Add distance from depot to customer with the euclidean distance.
                     # Assuming single customer demand <= vehicle max capacity
-                    if purpose == purpose.FITNESS:
-                        operation(vehicle_i_depot, customer_1)
-                    elif purpose == purpose.PLOTTING:
-                        operation(vehicle_i_depot, depot_index)
-                        operation(customer_1, depot_index)
-
                     # TODO add capacity constraint meaning vehicles with different capacity
                     # Thus customer demand > vehicle max capacity possible but at least 1 vehicle exists with greater capacity
                     vehicle_i_capacity += customer_1.demand
+
+                    if purpose == purpose.FITNESS:
+                        self.calculate_fitness(vehicle_i_depot, customer_1)
+                    elif purpose == purpose.PLOTTING:
+                        self.collect_routes(vehicle_i_depot, depot_index)
+                        self.collect_routes(customer_1, depot_index)
 
                 # Check if next customer exists in route
                 if j < depot_i_n_customers - 1:
@@ -219,36 +213,72 @@ class GA:
                         # Trip back to depot necessary. Assuming heading back to same depot it came from
                         # TODO visit different depot if possible e.g. AF-VRP charging points for robots
                         if purpose == purpose.FITNESS:
-                            operation(customer_1, vehicle_i_depot)
+                            self.calculate_fitness(customer_1, vehicle_i_depot)
                         elif purpose == purpose.PLOTTING:
-                            operation(vehicle_i_depot, depot_index)
+                            self.collect_routes(vehicle_i_depot, depot_index)
 
                         # from depot to next customer
                         if purpose == purpose.FITNESS:
-                            operation(vehicle_i_depot, customer_2)
+                            self.calculate_fitness(vehicle_i_depot, customer_2)
                         elif purpose == purpose.PLOTTING:
-                            operation(customer_2, depot_index)
+                            self.collect_routes(customer_2, depot_index)
 
                         vehicle_i_capacity = 0
                     else:
                         # Add distance between customers
                         if purpose == purpose.FITNESS:
-                            operation(customer_1, customer_2)
+                            self.calculate_fitness(customer_1, customer_2)
                         elif purpose == purpose.PLOTTING:
-                            operation(customer_2, depot_index)
+                            self.collect_routes(customer_2, depot_index)
 
                     vehicle_i_capacity += customer_2.demand
 
                 # Last iteration in loop, add trip from last customer to depot
                 if j >= depot_i_n_customers - 1:
                     if purpose == purpose.FITNESS:
-                        operation(customer_1, vehicle_i_depot)
+                        self.calculate_fitness(customer_1, vehicle_i_depot)
                     elif purpose == purpose.PLOTTING:
-                        operation(vehicle_i_depot, depot_index)
+                        self.collect_routes(vehicle_i_depot, depot_index)
 
             customer_index += depot_i_n_customers
 
-    def do_elitism(self, top_individuals: ndarray):
+        # simple fitness evaluation
+        self.total_fitness = self.total_distance + self.total_timeout
+
+    def calculate_fitness(self, obj1, obj2) -> None:
+        """
+        Calculate fitness for a single chromosome
+        param: obj1 and obj2 - Customers or Depots
+        """
+
+        self.total_distance += np.linalg.norm(
+            np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
+        self.total_timeout += 0
+
+    def collect_routes(self, obj, from_vehicle_i) -> None:
+        """
+        Add routing points and their id
+        param: obj - Customer or Depot object
+        param: from_vehicle_i - index from which vehicle the route is coming from
+        """
+
+        # Create empty entry for the vehicle
+        while len(self.route_data) <= from_vehicle_i:
+            self.route_data.append({'x_pos': [], 'y_pos': [], 'customer_ids': []})
+
+        self.route_data[from_vehicle_i]['x_pos'].append(obj.x)
+        self.route_data[from_vehicle_i]['y_pos'].append(obj.y)
+
+        # Differentiate between Customer or Depot object
+        if type(obj) is Customer:
+            self.route_data[from_vehicle_i]['customer_ids'].append(f"C{obj.id}")
+        elif type(obj) is Depot:
+            # Blind label
+            self.route_data[from_vehicle_i]['customer_ids'].append("")
+        else:
+            print("ERROR: unexpected behavior")
+
+    def do_elitism(self, top_individuals: ndarray) -> None:
         """
         Perform elitism by replacing the worst individuals with the best individuals
         param: top_individuals - structured 3D array ["individual"]["chromosome]["fitness"]
@@ -318,7 +348,7 @@ class GA:
                 self.mutation.insertion(children[i])
         return children
 
-    def log_configuration(self, individual):
+    def log_configuration(self, individual) -> None:
         """
         Logs every interesting parameter
         param: chromosome - the best solution found
@@ -331,9 +361,10 @@ class GA:
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nAdaptive tournament size: {self.tournament_size}'
                        f'\nElitism: {self.elitism_percentage}'
-                       f'\nBest fitness found: {individual["fitness"]:.2f}'
-                       f'\nBest chromosome found: ')
-            np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
+                       f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"])}'
+                       f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
+                       f'\nBest individual found: {individual}')
+            # np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
 
 
 from plot import plot_fitness, plot_routes

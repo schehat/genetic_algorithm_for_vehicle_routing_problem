@@ -4,7 +4,6 @@ import numpy as np
 from numpy import ndarray
 
 from GA import GA
-from src.plot import plot_routes
 from scipy.spatial.distance import euclidean
 
 

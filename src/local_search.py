@@ -1,6 +1,7 @@
 from numpy import ndarray
 
 from GA import GA
+from src.enums import Purpose
 
 
 def two_opt(ga: GA, individual: ndarray):
@@ -28,11 +29,14 @@ def two_opt(ga: GA, individual: ndarray):
             new_route[i + 1] = edge_j[0]
             new_route[j] = edge_i[1]
 
-            new_fitness = ga.evaluate_fitness(new_route)
+            ga.decode_chromosome(new_route, Purpose.FITNESS)
+            new_fitness = ga.total_fitness
 
             if new_fitness < individual["fitness"]:
                 best_route = new_route
                 individual["fitness"] = new_fitness
+                individual["distance"] = ga.total_distance
+                individual["timeout"] = ga.total_timeout
 
 
 # TODO

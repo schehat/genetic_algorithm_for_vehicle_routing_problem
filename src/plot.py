@@ -49,35 +49,9 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
 
     colors = ["salmon", "gold", "lightgreen", "mediumslateblue", "indianred", "orange", "limegreen", "deepskyblue",
               "yellow", "turquoise", "dodgerblue", "violet", "peru", "springgreen", "steelblue", "crimson"]
-    route_data = []
-
-    def collect_routes(obj, from_vehicle_i):
-        """
-        Add routing points and their id
-        param: obj - Customer or Depot object
-        param: from_vehicle_i - index from which vehicle the route is coming from
-        """
-
-        # use route_data declared above
-        nonlocal route_data
-        # Create empty entry for the vehicle
-        while len(route_data) <= from_vehicle_i:
-            route_data.append({'x_pos': [], 'y_pos': [], 'customer_ids': []})
-
-        route_data[from_vehicle_i]['x_pos'].append(obj.x)
-        route_data[from_vehicle_i]['y_pos'].append(obj.y)
-
-        # Differentiate between Customer or Depot object
-        if type(obj) is Customer:
-            route_data[from_vehicle_i]['customer_ids'].append(f"C{obj.id}")
-        elif type(obj) is Depot:
-            # Blind label
-            route_data[from_vehicle_i]['customer_ids'].append("")
-        else:
-            print("ERROR: unexpected behavior")
 
     # While decoding chromosome use collect_routes
-    ga.decode_chromosome(individual, Purpose.PLOTTING, collect_routes)
+    ga.decode_chromosome(individual, Purpose.PLOTTING)
 
     # Plot for every depot it routes
     color_index = 0
@@ -92,9 +66,9 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
 
         # Plot routes
         depot = ga.vrp_instance.depots[depot_index]
-        x_pos = route_data[depot_index]["x_pos"]
-        y_pos = route_data[depot_index]["y_pos"]
-        customer_ids = route_data[depot_index]["customer_ids"]
+        x_pos = ga.route_data[depot_index]["x_pos"]
+        y_pos = ga.route_data[depot_index]["y_pos"]
+        customer_ids = ga.route_data[depot_index]["customer_ids"]
 
         # Initialize variables to track the current route
         start = 0
@@ -122,11 +96,11 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
 
         plt.xlabel('X Coordinate')
         plt.ylabel('Y Coordinate')
-        plt.title(f'Routes Visualization Vehicle {depot_index + 1}')
+        plt.title(f'Depot Route Visualization {depot_index + 1}')
         plt.grid(True)
         plt.legend()
 
-        save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_vehicle_{depot_index + 1}")
+        save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"depot_route{depot_index + 1}")
 
         plt.show()
 
@@ -142,9 +116,9 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
     for depot_index in range(ga.vrp_instance.n_depots):
         # Plot routes
         depot = ga.vrp_instance.depots[depot_index]
-        x_pos = route_data[depot_index]["x_pos"]
-        y_pos = route_data[depot_index]["y_pos"]
-        customer_ids = route_data[depot_index]["customer_ids"]
+        x_pos = ga.route_data[depot_index]["x_pos"]
+        y_pos = ga.route_data[depot_index]["y_pos"]
+        customer_ids = ga.route_data[depot_index]["customer_ids"]
 
         # Initialize variables to track the current route
         start = 0
@@ -173,7 +147,7 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
     plt.grid(True)
     plt.legend()
 
-    save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"route_complete")
+    save_plot(plt, f"../results/{ga.__class__.__name__}/{ga.TIMESTAMP}", f"depot_complete_routes")
 
     plt.show()
 

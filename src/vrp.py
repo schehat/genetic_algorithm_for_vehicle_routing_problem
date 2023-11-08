@@ -6,8 +6,8 @@ class Customer:
     Customer information
     """
 
-    def __init__(self, id: int, x: float, y: float, demand: int, service_duration: int = 0,
-                 start_time_window: int = 0, end_time_window: int = 0):
+    def __init__(self, id: int, x: float, y: float, service_duration: int, demand: int,
+                 start_time_window: int, end_time_window: int):
         self.id = id
         self.x = x
         self.y = y
@@ -22,10 +22,17 @@ class Depot:
     Depot information
     """
 
-    def __init__(self, id: int, x: float, y: float):
+    def __init__(self, id: int, x: float, y: float, start_time_window: int, end_time_window: int):
         self.id = id
         self.x = x
         self.y = y
+        self.start_time_window = start_time_window
+        self.end_time_window = end_time_window
+
+
+# TODO
+class Vehicle:
+    pass
 
 
 class VRPInstance:
@@ -34,7 +41,7 @@ class VRPInstance:
     """
 
     def __init__(self, n_vehicles: int, n_customers: int, n_depots: int, max_capacity: int,
-                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int = 0):
+                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int):
         self.n_vehicles = n_vehicles
         self.n_customers = n_customers
         self.n_depots = n_depots

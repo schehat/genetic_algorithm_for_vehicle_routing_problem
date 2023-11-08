@@ -1,0 +1,9 @@
+Population size: 100
+Generations: 1000
+Fitness scaling: power_rank
+Selection method: n_tournaments
+Adaptive tournament size: 13
+Elitism: 0.05
+Best fitness found before local search: 641.3175803647865
+Best fitness found after local search: 629.52
+Best individual found: (83, [12, 16, 10, 12,  4, 18, 13, 19, 40, 42, 44, 45, 15, 37, 17, 41, 47, 25, 14, 24, 43,  7, 23,  6, 48,  8, 26, 31,  1, 27, 12, 46, 32, 11, 38,  5, 49, 30, 33, 39, 10,  9, 16, 50, 34, 21, 29,  2, 22, 28,  3, 36, 35, 20], 629.52184997, 629.52184997, 0.)
