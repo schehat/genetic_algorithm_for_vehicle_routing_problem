@@ -267,7 +267,7 @@ class GA:
             customer_index += depot_i_n_customers
 
         # simple fitness evaluation
-        self.total_fitness = self.total_distance + 3*self.total_timeout
+        self.total_fitness = self.total_distance + self.total_timeout**2
 
     @staticmethod
     def euclidean_distance(obj1, obj2) -> float:
