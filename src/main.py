@@ -6,7 +6,7 @@ from GA import GA
 from fitness_scaling import power_rank
 from selection import n_tournaments
 from local_search import two_opt
-from initial_population import initial_population_grouping_savings_nnh
+from initial_population import initial_population_grouping_savings_nnh, initial_population_random
 from vrp import Customer, Depot, VRPInstance
 
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p01"
+    INSTANCE_FILE_PATH = "../benchmark/c-mdvrptw/pr01"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
@@ -90,11 +90,12 @@ if __name__ == "__main__":
     MUTATION_RATE = 0.5
     MAX_GENERATIONS = 1000
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
+    # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH = two_opt
     tournament_size = 3
-    elitism_percentage = 0.05
+    elitism_percentage = 0.1
 
     # Configure GA and run
     ga = GA(VRP_INSTANCE,

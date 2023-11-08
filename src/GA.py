@@ -39,7 +39,7 @@ class GA:
                  tournament_size_increment: int = 1,
                  elitism_percentage: float = 0.1,
                  k1: float = 0.9,
-                 k2: float = 0.4):
+                 k2: float = 0.3):
         """
             param: k1 and k2 - control rates for adaptive genetic operators
         """
@@ -166,94 +166,118 @@ class GA:
         Expecting a purpose to evaluate which operation should be used
         param: chromosome - 1D array
         param: purpose - defines which operation should be used
-        param: operation - function pointer passed to enable maximum flexibility what should happen while decoding.
-                           Needs to be in coordination with purpose parameter
         """
 
         customer_index = self.vrp_instance.n_depots
         self.total_fitness = 0.0
         self.total_distance = 0.0
         self.total_timeout = 0
-        current_distance_duration = 0
-        current_service_duration = 0
 
         for depot_index in range(self.vrp_instance.n_depots):
             depot_i_n_customers = chromosome[depot_index]
             # Capacity for every vehicle the same at the moment. TODO dynamic capacity with vehicle class
             vehicle_i_capacity = 0
+            vehicle_i_travelled_distance = 0
+            vehicle_i_current_time = 0
             vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
 
             for j in range(depot_i_n_customers):
                 customer_value1 = chromosome[customer_index + j]
                 # Indexing of customers starts with 1 not 0, so -1 necessary
-                customer_1: Customer = self.vrp_instance.customers[customer_value1 - 1]
+                customer1: Customer = self.vrp_instance.customers[customer_value1 - 1]
 
                 # First iteration in loop: first trip 
                 if j == 0:
-                    # Add distance from depot to customer with the euclidean distance.
+                    # Add distance from depot to customer with the euclidean distance
                     # Assuming single customer demand <= vehicle max capacity
                     # TODO add capacity constraint meaning vehicles with different capacity
                     # Thus customer demand > vehicle max capacity possible but at least 1 vehicle exists with greater capacity
-                    vehicle_i_capacity += customer_1.demand
+                    vehicle_i_capacity += customer1.demand
 
-                    if purpose == purpose.FITNESS:
-                        self.calculate_fitness(vehicle_i_depot, customer_1)
-                    elif purpose == purpose.PLOTTING:
+                    # Track travelled distance in total and per vehicle to check route duration constraint
+                    distance = self.euclidean_distance(vehicle_i_depot, customer1)
+                    self.total_distance += distance
+                    vehicle_i_travelled_distance += distance
+
+                    # At the beginning vehicle time starts always with the first customer start window
+                    vehicle_i_current_time = customer1.start_time_window
+
+                    if purpose == purpose.PLOTTING:
                         self.collect_routes(vehicle_i_depot, depot_index)
-                        self.collect_routes(customer_1, depot_index)
+                        self.collect_routes(customer1, depot_index)
 
                 # Check if next customer exists in route
                 if j < depot_i_n_customers - 1:
                     customer_value2 = chromosome[customer_index + j + 1]
-                    customer_2: Customer = self.vrp_instance.customers[customer_value2 - 1]
+                    customer2: Customer = self.vrp_instance.customers[customer_value2 - 1]
 
-                    # Check customer_2 demand exceeds vehicle capacity limit
+                    # Check customer 2 demand exceeds vehicle capacity limit
                     # TODO Add heterogeneous capacity for vehicles
-                    if vehicle_i_capacity + customer_2.demand > self.vrp_instance.max_capacity:
+                    if vehicle_i_capacity + customer2.demand > self.vrp_instance.max_capacity:
                         # Trip back to depot necessary. Assuming heading back to same depot it came from
                         # TODO visit different depot if possible e.g. AF-VRP charging points for robots
-                        if purpose == purpose.FITNESS:
-                            self.calculate_fitness(customer_1, vehicle_i_depot)
-                        elif purpose == purpose.PLOTTING:
-                            self.collect_routes(vehicle_i_depot, depot_index)
 
-                        # from depot to next customer
-                        if purpose == purpose.FITNESS:
-                            self.calculate_fitness(vehicle_i_depot, customer_2)
-                        elif purpose == purpose.PLOTTING:
-                            self.collect_routes(customer_2, depot_index)
+                        # From customer 1 to depot
+                        distance1 = self.euclidean_distance(customer1, vehicle_i_depot)
+                        self.total_distance += distance1
+                        vehicle_i_travelled_distance += distance1
 
+                        # TODO LOG info vehicle_i travel and capacity... Learn to use all vehicles
+
+                        # New vehicle from depot to customer 2
+                        distance2 = self.euclidean_distance(vehicle_i_depot, customer2)
+                        self.total_distance += distance2
+                        # Reset values. Capacity for customer2.demand added later
                         vehicle_i_capacity = 0
-                    else:
-                        # Add distance between customers
-                        if purpose == purpose.FITNESS:
-                            self.calculate_fitness(customer_1, customer_2)
-                        elif purpose == purpose.PLOTTING:
-                            self.collect_routes(customer_2, depot_index)
+                        vehicle_i_travelled_distance = distance2
+                        vehicle_i_current_time = customer2.start_time_window
 
-                    vehicle_i_capacity += customer_2.demand
+                        if purpose == purpose.PLOTTING:
+                            self.collect_routes(vehicle_i_depot, depot_index)
+                            self.collect_routes(customer2, depot_index)
+                    else:
+                        # Add distance between customer 1 and customer 2
+                        distance = self.euclidean_distance(customer1, customer2)
+                        self.total_distance += distance
+                        vehicle_i_travelled_distance += distance
+
+                        vehicle_i_current_time += customer1.service_duration + distance
+
+                        if purpose == purpose.PLOTTING:
+                            self.collect_routes(customer2, depot_index)
+
+                    vehicle_i_capacity += customer2.demand
+                    # Check if vehicle reaches customer 2 before start window then needs to wait
+                    if vehicle_i_current_time < customer2.start_time_window:
+                        vehicle_i_current_time = customer2.start_time_window
+                    # Check if vehicle reaches customer 2 later than end time window then penalty
+                    elif vehicle_i_current_time > customer2.end_time_window:
+                        self.total_timeout += vehicle_i_current_time - customer2.start_time_window
 
                 # Last iteration in loop, add trip from last customer to depot
                 if j >= depot_i_n_customers - 1:
-                    if purpose == purpose.FITNESS:
-                        self.calculate_fitness(customer_1, vehicle_i_depot)
-                    elif purpose == purpose.PLOTTING:
+                    # Add distance between customer 1 and customer 2
+                    distance = self.euclidean_distance(customer1, vehicle_i_depot)
+                    self.total_distance += distance
+                    vehicle_i_travelled_distance += distance
+
+                    if purpose == purpose.PLOTTING:
                         self.collect_routes(vehicle_i_depot, depot_index)
 
             customer_index += depot_i_n_customers
 
         # simple fitness evaluation
-        self.total_fitness = self.total_distance + self.total_timeout
+        self.total_fitness = self.total_distance + 3*self.total_timeout
 
-    def calculate_fitness(self, obj1, obj2) -> None:
+    @staticmethod
+    def euclidean_distance(obj1, obj2) -> float:
         """
         Calculate fitness for a single chromosome
         param: obj1 and obj2 - Customers or Depots
         """
 
-        self.total_distance += np.linalg.norm(
+        return np.linalg.norm(
             np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
-        self.total_timeout += 0
 
     def collect_routes(self, obj, from_vehicle_i) -> None:
         """
@@ -354,6 +378,10 @@ class GA:
         param: chromosome - the best solution found
         """
 
+        # Sort population
+        sorted_indices = np.argsort(self.population["fitness"])
+        self.population[:] = self.population[sorted_indices]
+
         with open(f'../results/{self.__class__.__name__}/{self.TIMESTAMP}/best_chromosome.txt', 'a') as file:
             file.write(f'Population size: {self.population_size}'
                        f'\nGenerations: {self.max_generations}'
@@ -363,7 +391,8 @@ class GA:
                        f'\nElitism: {self.elitism_percentage}'
                        f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"])}'
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
-                       f'\nBest individual found: {individual}')
+                       f'\nBest individual found: {individual}'
+                        f'\n\nAll individuals: {self.population}')
             # np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
 
 
