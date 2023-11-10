@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 from enums import Purpose
-from GA import GA
+from GA1 import GA1
 from vrp import Depot, Customer
 
 
-def plot_fitness(ga: GA, width=8, height=6, interval=50):
+def plot_fitness(ga: GA1, width=8, height=6, interval=50):
     """
     Plot data points for minimum and average fitness values over generations at given intervals
     param: ga - genetic algorithm

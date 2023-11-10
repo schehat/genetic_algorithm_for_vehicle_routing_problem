@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from GA import GA
+from GA1 import GA1
 from fitness_scaling import power_rank
 from selection import n_tournaments
-from local_search import two_opt
+from local_search import two_opt_complete, two_opt_single
 from initial_population import initial_population_grouping_savings_nnh, initial_population_random
 from vrp import Customer, Depot, VRPInstance
 
@@ -81,32 +81,34 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/c-mdvrptw/pr01"
+    INSTANCE_FILE_PATH = "../benchmark/C-mdvrp/p01"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 1000
+    MAX_GENERATIONS = 1
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
-    LOCAL_SEARCH = two_opt
-    tournament_size = 3
-    elitism_percentage = 0.1
+    LOCAL_SEARCH_COMPLETE = two_opt_complete
+    LOCAL_SEARCH_SINGLE = two_opt_single
+    tournament_size = 4
+    elitism_percentage = 0.05
 
     # Configure GA and run
-    ga = GA(VRP_INSTANCE,
-            POPULATION_SIZE,
-            CROSSOVER_RATE,
-            MUTATION_RATE,
-            MAX_GENERATIONS,
-            INITIAL_POPULATION,
-            FITNESS_SCALING,
-            SELECTION_METHOD,
-            LOCAL_SEARCH,
-            tournament_size=tournament_size,
-            elitism_percentage=elitism_percentage)
+    ga = GA1(VRP_INSTANCE,
+             POPULATION_SIZE,
+             CROSSOVER_RATE,
+             MUTATION_RATE,
+             MAX_GENERATIONS,
+             INITIAL_POPULATION,
+             FITNESS_SCALING,
+             SELECTION_METHOD,
+             LOCAL_SEARCH_COMPLETE,
+             LOCAL_SEARCH_SINGLE,
+             tournament_size=tournament_size,
+             elitism_percentage=elitism_percentage)
     ga.run()

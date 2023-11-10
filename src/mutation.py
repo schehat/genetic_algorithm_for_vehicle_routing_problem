@@ -29,8 +29,8 @@ class Mutation:
         """
 
         # Define the range for mutated number of customers
-        min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 0.5)
-        max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 1.5)
+        min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 0.7)
+        max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_vehicles) * 1.3)
         # mutation_range = 2
 
         # Iterate through the vehicles and apply uniform mutation

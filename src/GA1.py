@@ -11,7 +11,7 @@ from vrp import Customer, Depot, VRPInstance
 import datetime
 
 
-class GA:
+class GA1:
     """
     - Hybrid genetic algorithm with heuristics and local search
     - Chromosome representation specific integer string consisting of two parts:
@@ -34,7 +34,8 @@ class GA:
                  initial_population: Callable[[any], None],  # any => GA
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
-                 local_search,
+                 local_search_complete,
+                 local_search_single,
                  tournament_size: int = 5,
                  tournament_size_increment: int = 1,
                  elitism_percentage: float = 0.1,
@@ -52,7 +53,8 @@ class GA:
         self.initial_population = initial_population
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, int], ndarray] = selection_method
-        self.local_search = local_search
+        self.local_search_complete = local_search_complete
+        self.local_search_single = local_search_single
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
         self.elitism_percentage = elitism_percentage
@@ -130,6 +132,7 @@ class GA:
 
             children = self.do_crossover(children)
             children = self.do_mutation(children)
+            # self.local_search_single(self, self.best_solution)
 
             # Replace old generation with new generation
             self.population["chromosome"] = children
@@ -140,24 +143,28 @@ class GA:
             # if self.fitness_stats["min"][generation] - self.THRESHOLD > fitness_bound:
             #     break
 
-        # get best individual
-        self.local_search(self, self.best_solution)
-        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        # # get best individual
+        # self.local_search_complete(self, self.best_solution)
+        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         # if self.best_solution["fitness"] < np.min(self.fitness_stats["min"]):
         #     self.fitness_stats[self.max_generations - 1]["min"] = self.best_solution["fitness"]
 
-        plot_fitness(self)
-        plot_routes(self, self.best_solution["chromosome"])
-        self.log_configuration(self.best_solution)
+        # plot_fitness(self)
+        # plot_routes(self, self.best_solution["chromosome"])
+        # self.log_configuration(self.best_solution)
 
-        # self.population[0]["chromosome"] = [14, 19, 8, 9, 44, 45, 33, 15, 37, 17, 42, 19, 40, 41,
-        #                                             13, 25, 18, 4,
-        #                                             6, 27, 1, 32, 11, 46, 48, 8, 26, 31, 28, 22, 23, 7, 43, 24, 14, 12,
-        #                                             47,
-        #                                             9, 34, 30, 39, 10, 49, 5, 38,
-        #                                             35, 36, 3, 20, 21, 50, 16, 2, 29]
-        # plot_routes(self, self.population[0]["chromosome"])
-        # print(self.evaluate_fitness(self.population[0]["chromosome"]))
+        self.population[0]["chromosome"] = [14, 19, 8, 9, 44, 45, 33, 15, 37, 17, 42, 19, 40, 41,
+                                                    13, 25, 18, 4,
+                                                    6, 27, 1, 32, 11, 46, 48, 8, 26, 31, 28, 22, 23, 7, 43, 24, 14, 12,
+                                                    47,
+                                                    9, 34, 30, 39, 10, 49, 5, 38,
+                                                    35, 36, 3, 20, 21, 50, 16, 2, 29]
+        plot_routes(self, self.population[0]["chromosome"])
+        self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
+        self.population[0]["fitness"] = self.total_fitness
+        self.population[0]["distance"] = self.total_distance
+        self.population[0]["timeout"] = self.total_timeout
+        print(self.population[0])
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
         """
@@ -177,6 +184,7 @@ class GA:
             depot_i_n_customers = chromosome[depot_index]
             # Capacity for every vehicle the same at the moment. TODO dynamic capacity with vehicle class
             vehicle_i_capacity = 0
+            # TODO route duration is not travelled distance!!!
             vehicle_i_travelled_distance = 0
             vehicle_i_current_time = 0
             vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
@@ -267,7 +275,7 @@ class GA:
             customer_index += depot_i_n_customers
 
         # simple fitness evaluation
-        self.total_fitness = self.total_distance + self.total_timeout**2
+        self.total_fitness = self.total_distance #+ self.total_timeout**2
 
     @staticmethod
     def euclidean_distance(obj1, obj2) -> float:

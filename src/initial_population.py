@@ -3,11 +3,11 @@ import random
 import numpy as np
 from numpy import ndarray
 
-from GA import GA
+from GA1 import GA1
 from scipy.spatial.distance import euclidean
 
 
-def initial_population_random(ga: GA):
+def initial_population_random(ga: GA1):
     """
     Generate random initial population
     Part 1: average assignment of customers + rest
@@ -53,7 +53,7 @@ def initial_population_random(ga: GA):
         ga.population[i]["chromosome"] = chromosome
 
 
-def initial_population_grouping_savings_nnh(ga: GA):
+def initial_population_grouping_savings_nnh(ga: GA1):
     """
     TODO
     """
@@ -85,7 +85,7 @@ def initial_population_grouping_savings_nnh(ga: GA):
         ga.population[i]["chromosome"] = chromosome
 
 
-def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
+def assign_customers_to_closest_depots(ga: GA1, links: ndarray, ):
     """
     Iterate through customers and assign them to the closest depot in place
     TODO
@@ -106,7 +106,7 @@ def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
         links["customer_order"][closest_depot_index].append(customer.id)
 
 
-def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray, routing_result: list):
+def wright_clark_savings(ga: GA1, depot_customer_order: np.ndarray, routing_result: list):
     # TODO: return result
     for depot_index, depot_orders in enumerate(depot_customer_order):
         # Create a list of customer pairs and their corresponding savings
@@ -215,7 +215,7 @@ def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray, routing_resul
         routing_result.append(routes)
 
 
-def nearest_neighbor_heuristic(ga: GA, routing_result: list):
+def nearest_neighbor_heuristic(ga: GA1, routing_result: list):
     for depot_routes in routing_result:
         for route in depot_routes:
             if len(route) >= 2:
