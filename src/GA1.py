@@ -153,13 +153,24 @@ class GA1:
         # plot_routes(self, self.best_solution["chromosome"])
         # self.log_configuration(self.best_solution)
 
-        self.population[0]["chromosome"] = [14, 19, 8, 9, 44, 45, 33, 15, 37, 17, 42, 19, 40, 41,
-                                                    13, 25, 18, 4,
-                                                    6, 27, 1, 32, 11, 46, 48, 8, 26, 31, 28, 22, 23, 7, 43, 24, 14, 12,
-                                                    47,
-                                                    9, 34, 30, 39, 10, 49, 5, 38,
-                                                    35, 36, 3, 20, 21, 50, 16, 2, 29]
-        plot_routes(self, self.population[0]["chromosome"])
+        self.population[0]["chromosome"] = [14, 19, 8, 9,
+                                            44, 45, 33, 15, 37, 17,
+                                            42, 19, 40, 41, 13,
+                                            25, 18, 4,
+
+                                            6, 27, 1, 32, 11, 46,
+                                            48, 8, 26, 31, 28, 22,
+                                            23, 7, 43, 24, 14,
+                                            12, 47,
+
+                                            9, 34, 30, 39, 10,
+                                            49, 5, 38,
+
+                                            35, 36, 3, 20,
+                                            21, 50, 16, 2, 29
+                                            ]
+        self.split(self.population[0]["chromosome"])
+        # plot_routes(self, self.population[0]["chromosome"])
         self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
         self.population[0]["fitness"] = self.total_fitness
         self.population[0]["distance"] = self.total_distance
@@ -275,7 +286,53 @@ class GA1:
             customer_index += depot_i_n_customers
 
         # simple fitness evaluation
-        self.total_fitness = self.total_distance #+ self.total_timeout**2
+        self.total_fitness = self.total_distance  # + self.total_timeout**2
+
+    def split(self, chromosome: ndarray) -> None:
+        customer_index = self.vrp_instance.n_depots
+
+        for depot_index in range(self.vrp_instance.n_depots):
+            depot_i_n_customers = chromosome[depot_index]
+            # Capacity for every vehicle the same at the moment. TODO dynamic capacity with vehicle class
+            load = 0
+            # TODO route duration is not travelled distance!!!
+            vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
+
+            p = np.full(depot_i_n_customers + 1, np.inf)
+            p[0] = 0
+            pred = np.zeros(depot_i_n_customers + 1)
+
+            for t in range(depot_i_n_customers):
+                load = 0
+                i = t + 1
+
+                customer_value_i = chromosome[customer_index + (i - 1)]
+                # Indexing of customers starts with 1 not 0, so -1 necessary
+                customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
+
+                while i <= depot_i_n_customers and load + customer_i.demand <= self.vrp_instance.max_capacity:
+                    load += customer_i.demand
+
+                    if i == t + 1:
+                        distance = self.euclidean_distance(vehicle_i_depot, customer_i)
+                        self.total_distance += distance
+                        cost = distance
+                    else:
+                        customer_value_pre_i = chromosome[customer_index + (i - 1 - 1)]
+                        customer_pre_i: Customer = self.vrp_instance.customers[customer_value_pre_i - 1]
+                        distance = self.euclidean_distance(customer_pre_i, customer_i)
+                        cost += distance
+
+                    distance = self.euclidean_distance(customer_i, vehicle_i_depot)
+                    if p[t] + cost + distance < p[i]:
+                        p[i] = p[t] + cost + distance
+                        pred[i] = t
+
+                    i += 1
+                    customer_value_i = chromosome[customer_index + (i-1)]
+                    customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
+
+            customer_index += depot_i_n_customers
 
     @staticmethod
     def euclidean_distance(obj1, obj2) -> float:
@@ -400,7 +457,7 @@ class GA1:
                        f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"])}'
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
-                        f'\n\nAll individuals: {self.population}')
+                       f'\n\nAll individuals: {self.population}')
             # np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
 
 
