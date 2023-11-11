@@ -76,12 +76,13 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
         for j in range(1, len(x_pos)):
             # Start a new route with a new color
             if x_pos[j] == depot.x and y_pos[j] == depot.y:
-                # Plot the current route
-                plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
-                if color_index < len(colors):
+                if color_index + 1 < len(colors):
                     color_index += 1
                 else:
                     color_index = 0
+
+                # Plot the current route
+                plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
                 # Should point to depot
                 start = j
 
@@ -126,6 +127,11 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
         for j in range(1, len(x_pos)):
             # Start a new route with a new color
             if x_pos[j] == depot.x and y_pos[j] == depot.y:
+                if color_index + 1 < len(colors):
+                    color_index += 1
+                else:
+                    color_index = 0
+
                 # Plot the current route
                 plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
                 color_index += 1
