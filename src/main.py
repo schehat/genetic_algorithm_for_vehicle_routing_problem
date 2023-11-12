@@ -95,8 +95,8 @@ if __name__ == "__main__":
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH_COMPLETE = two_opt_complete
     LOCAL_SEARCH_SINGLE = two_opt_single
-    tournament_size = 3
-    elitism_percentage = 0.05
+    tournament_size = 1
+    elitism_percentage = 0.1
 
     # Configure GA and run
     ga = GA(VRP_INSTANCE,

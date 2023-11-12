@@ -55,7 +55,10 @@ def initial_population_random(ga: GA):
 
 def initial_population_grouping_savings_nnh(ga: GA):
     """
-    TODO
+    Generate initial population
+    Part 1: grouping - group customers to the nearest depot
+    Part 2: routing - apply savings method to create routes
+    Part 3: scheduling - apply nearest neighbor heuristic to schedule the customers inside a route
     """
 
     for i in range(ga.population_size):
@@ -88,7 +91,6 @@ def initial_population_grouping_savings_nnh(ga: GA):
 def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
     """
     Iterate through customers and assign them to the closest depot in place
-    TODO
     """
     for customer_index, customer in enumerate(ga.vrp_instance.customers):
         customer_x, customer_y = customer.x, customer.y
@@ -107,7 +109,6 @@ def assign_customers_to_closest_depots(ga: GA, links: ndarray, ):
 
 
 def wright_clark_savings(ga: GA, depot_customer_order: np.ndarray, routing_result: list):
-    # TODO: return result
     for depot_index, depot_orders in enumerate(depot_customer_order):
         # Create a list of customer pairs and their corresponding savings
         n_customers = len(depot_orders[0])

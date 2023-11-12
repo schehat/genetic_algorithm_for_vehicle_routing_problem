@@ -22,9 +22,10 @@ class GA:
         => second depot (Index 1) has 2 customers, serving customer 6 and 7
     """
 
-    THRESHOLD = 200
     TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     generation = 0
+    num_generation_no_improvement = 0
+    NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = None
 
     def __init__(self, vrp_instance: VRPInstance,
                  population_size: int,
@@ -61,6 +62,8 @@ class GA:
         self.k1 = k1
         self.k2 = k2
 
+        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.3
+
         population_type = np.dtype([
             ("individual", int),
             ("chromosome", int,
@@ -83,6 +86,8 @@ class GA:
         self.total_timeout = 0
 
         self.route_data = []
+
+        self.plotter = Plot(self)
 
     def run(self):
         """
@@ -137,23 +142,22 @@ class GA:
             # Replace old generation with new generation
             self.population["chromosome"] = children
 
-            # Termination convergence criteria
             print(f"{self.generation}")
-            # fitness_bound = self.fitness_stats["min"][generation - int(self.max_generations*0.3)] if generation - int(self.max_generations*0.3) >= 0 else float('inf')
-            # if self.fitness_stats["min"][generation] - self.THRESHOLD > fitness_bound:
-            #     break
 
-        # # get best individual
+            # Termination convergence criteria
+            if self.fitness_stats["min"][self.generation] > self.best_solution["fitness"]:
+                self.num_generation_no_improvement += 1
+            else:
+                self.num_generation_no_improvement = 0
+            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT:
+                break
+
         # self.local_search_complete(self, self.best_solution)
         # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        # if self.best_solution["fitness"] < np.min(self.fitness_stats["min"]):
-        #     self.fitness_stats[self.max_generations - 1]["min"] = self.best_solution["fitness"]
-
-        # plot_fitness(self)
-        # plot_routes(self, self.best_solution["chromosome"])
+        #
+        # self.plotter.plot_fitness()
+        # self.plotter.plot_routes(self.best_solution["chromosome"])
         # self.log_configuration(self.best_solution)
-
-        # p01
         self.population[0]["chromosome"] = [14, 19, 8, 9,
                                             44, 45, 33, 15, 37, 17,
                                             42, 19, 40, 41, 13,
@@ -170,36 +174,14 @@ class GA:
                                             35, 36, 3, 20,
                                             21, 50, 16, 2, 29
                                             ]
-
-        # self.population[0]["chromosome"] = [50, 50,
-        #                                     41, 23, 67, 39, 56,
-        #                                     96, 6, 89, 27, 28, 53, 58,
-        #                                     92, 61, 16, 86, 38, 43, 15,
-        #                                     57, 42, 14, 44, 91, 100, 98, 37, 97,
-        #                                     21, 72, 74, 75, 22, 2,
-        #                                     73, 4, 25, 55, 54, 12, 26, 40,
-        #                                     59, 99, 93, 85,
-        #                                     87, 95, 94, 13,
-        #
-        #                                     69, 76, 77, 68, 80, 24, 29, 3,
-        #                                     51, 9, 35, 71, 65, 66, 70,
-        #                                     8, 45, 17, 84, 5, 60, 83, 18, 52,
-        #                                     63, 64, 49, 36, 47, 46, 82,
-        #                                     33, 81, 34, 78, 79, 50, 1,
-        #                                     88, 7, 48, 19, 11, 62,
-        #                                     31, 10, 90, 32, 20, 30
-        #                                     ]
-        print(self.split(self.population[0]["chromosome"]))
-        # self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
-        plot_routes(self, self.population[0]["chromosome"])
-        self.population[0]["fitness"] = self.total_fitness
-        self.population[0]["distance"] = self.total_distance
-        self.population[0]["timeout"] = self.total_timeout
-        print(self.population[0])
+        self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
+        self.population[0]["chromosome"]["fitness"] = self.total_fitness
+        self.population[0]["chromosome"]["distance"] = self.total_distance
+        self.population[0]["chromosome"]["timeout"] = self.total_timeout
+        print(self.population[0]["chromosome"])
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
         """
-        TODO: using numpy arrays correctly!!!
         Decoding chromosome by traversing the genes considering constraints and fetching the routes.
         Expecting a purpose to evaluate which operation should be used
         param: chromosome - 1D array
@@ -210,7 +192,7 @@ class GA:
         self.total_distance = 0.0
         self.total_timeout = 0
 
-        if Purpose.PLOTTING:
+        if purpose == Purpose.PLOTTING:
             self.route_data = []
 
         route_complete, pred_complete = self.split(chromosome)
@@ -221,13 +203,12 @@ class GA:
         vehicle_capacity = 0
         distance = 0
 
-        print(route_complete)
-        print(pred_complete)
+        print(route_complete, pred_complete)
 
         for i_customer in chromosome[self.vrp_instance.n_depots:]:
             # Check if iterated through all routes of a depot then update depot
             if route_complete[i_route] == 0:
-                if Purpose.PLOTTING:
+                if purpose == Purpose.PLOTTING:
                     if depot is not None:
                         self.collect_routes(depot, i_depot)
 
@@ -235,7 +216,7 @@ class GA:
                 i_depot += 1
                 depot = self.vrp_instance.depots[i_depot]
 
-                if Purpose.PLOTTING:
+                if purpose == Purpose.PLOTTING:
                     self.collect_routes(depot, i_depot)
 
             pred = pred_complete[i_route]
@@ -245,13 +226,13 @@ class GA:
 
             customer1: Customer = self.vrp_instance.customers[i_customer - 1]
 
-            if Purpose.PLOTTING:
+            if purpose == Purpose.PLOTTING:
                 self.collect_routes(customer1, i_depot)
 
             i_route += 1
 
         # At the end last depot
-        if Purpose.PLOTTING:
+        if purpose == Purpose.PLOTTING:
             self.collect_routes(depot, i_depot)
 
         # Find indices where 0 occurs
@@ -265,12 +246,17 @@ class GA:
 
     def split(self, chromosome: ndarray) -> Tuple[ndarray, ndarray]:
         customer_index = self.vrp_instance.n_depots
+        customer_index_list = [customer_index]
+        for depot_i in range(self.vrp_instance.n_depots - 1):
+            customer_index += chromosome[depot_i]
+            customer_index_list.append(customer_index)
+
         p_complete = np.array([], dtype=int)
         pred_complete = np.array([], dtype=int)
 
-        for depot_index in range(self.vrp_instance.n_depots):
-            depot_i_n_customers = chromosome[depot_index]
-            vehicle_i_depot: Depot = self.vrp_instance.depots[depot_index]
+        for x, depot_i in enumerate(range(self.vrp_instance.n_depots)):
+            depot_i_n_customers = chromosome[depot_i]
+            vehicle_i_depot: Depot = self.vrp_instance.depots[depot_i]
 
             p = np.full(depot_i_n_customers + 1, np.inf)
             p[0] = 0
@@ -280,7 +266,7 @@ class GA:
                 load = 0
                 i = t + 1
 
-                customer_value_i = chromosome[customer_index + (i - 1)]
+                customer_value_i = chromosome[customer_index_list[x] + (i - 1)]
                 # Indexing of customers starts with 1 not 0, so -1 necessary
                 customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
 
@@ -291,7 +277,7 @@ class GA:
                         distance = self.euclidean_distance(vehicle_i_depot, customer_i)
                         cost = distance
                     else:
-                        customer_value_pre_i = chromosome[customer_index + (i - 1 - 1)]
+                        customer_value_pre_i = chromosome[customer_index_list[x] + (i - 1 - 1)]
                         customer_pre_i: Customer = self.vrp_instance.customers[customer_value_pre_i - 1]
                         distance = self.euclidean_distance(customer_pre_i, customer_i)
                         cost += distance
@@ -304,13 +290,12 @@ class GA:
                     i += 1
 
                     # Bounds check
-                    if customer_index + (i - 1) < self.vrp_instance.n_depots + self.vrp_instance.n_customers:
-                        customer_value_i = chromosome[customer_index + (i - 1)]
+                    if customer_index_list[x] + (i - 1) < self.vrp_instance.n_depots + self.vrp_instance.n_customers:
+                        customer_value_i = chromosome[customer_index_list[x] + (i - 1)]
                         customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
                     else:
                         break
 
-            customer_index += depot_i_n_customers
             p_complete = np.concatenate((p_complete, p))
             pred_complete = np.concatenate((pred_complete, pred))
 
@@ -421,8 +406,8 @@ class GA:
 
     def log_configuration(self, individual) -> None:
         """
-        Logs every interesting parameter
-        param: chromosome - the best solution found
+        Logs every relevant parameter
+        param: individual - the best solution found
         """
 
         # Sort population
@@ -440,7 +425,6 @@ class GA:
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
                        f'\n\nAll individuals: {self.population}')
-            # np.savetxt(file, individual["chromosome"], fmt='%d', newline=' ')
 
 
-from plot import plot_routes
+from plot import Plot

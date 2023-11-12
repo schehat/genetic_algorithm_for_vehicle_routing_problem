@@ -32,6 +32,10 @@ class Depot:
 
 # TODO
 class Vehicle:
+    """
+    Vehicle information
+    """
+
     pass
 
 
