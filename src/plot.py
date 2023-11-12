@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 from enums import Purpose
-from GA1 import GA1
+from GA import GA
 from vrp import Depot, Customer
 
 
-def plot_fitness(ga: GA1, width=8, height=6, interval=50):
+def plot_fitness(ga: GA, width=8, height=6, interval=50):
     """
     Plot data points for minimum and average fitness values over generations at given intervals
     param: ga - genetic algorithm
@@ -54,7 +54,7 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
     ga.decode_chromosome(individual, Purpose.PLOTTING)
 
     # Plot for every depot it routes
-    color_index = 0
+    color_index = -1
     for depot_index in range(ga.vrp_instance.n_depots):
         plt.figure(figsize=(width, height))
 
@@ -113,7 +113,7 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
                     zorder=2)
 
     # Plot for every vehicle it routes
-    color_index = 0
+    color_index = -1
     for depot_index in range(ga.vrp_instance.n_depots):
         # Plot routes
         depot = ga.vrp_instance.depots[depot_index]
@@ -134,7 +134,6 @@ def plot_routes(ga, individual: ndarray, width=12, height=10):
 
                 # Plot the current route
                 plt.plot(x_pos[start:j+1], y_pos[start:j+1], marker='o', color=colors[color_index], zorder=1)
-                color_index += 1
                 # Should point to depot
                 start = j
 

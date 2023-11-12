@@ -1,10 +1,10 @@
 from numpy import ndarray
 
-from GA1 import GA1
+from GA import GA
 from src.enums import Purpose
 
 
-def two_opt_complete(ga: GA1, individual: ndarray):
+def two_opt_complete(ga: GA, individual: ndarray):
     """
     Applies two opt in place
     param: ga - genetic algorithm
@@ -39,7 +39,7 @@ def two_opt_complete(ga: GA1, individual: ndarray):
                 individual["timeout"] = ga.total_timeout
 
 
-def two_opt_single(ga: GA1, individual: ndarray):
+def two_opt_single(ga: GA, individual: ndarray):
     """
     Applies two opt in place
     param: ga - genetic algorithm
