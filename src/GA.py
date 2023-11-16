@@ -68,7 +68,7 @@ class GA:
         self.k1 = k1
         self.k2 = k2
 
-        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.3
+        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
 
         population_type = np.dtype([
             ("individual", int),
@@ -128,7 +128,7 @@ class GA:
                 self.population[i]["distance"] = self.total_distance
                 self.population[i]["time_warp"] = self.total_time_warp
 
-            self.calculate_biased_fitness()
+            # self.calculate_biased_fitness()
 
             # Save statistics about raw fitness
             self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
@@ -276,7 +276,7 @@ class GA:
         selected_values = self.distance_complete[np.concatenate([depot_value_index])]
         self.total_distance = np.sum(selected_values)
 
-        # TODO different approach
+        # TODO different approach & for duration
         selected_values = self.time_warp_complete[np.concatenate([depot_value_index])]
         self.total_time_warp = np.sum(selected_values)
 

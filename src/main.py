@@ -88,7 +88,7 @@ if __name__ == "__main__":
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 1
+    MAX_GENERATIONS = 600
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
