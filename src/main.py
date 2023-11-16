@@ -47,35 +47,6 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
     return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route)
 
 
-# def test_operators():
-#     """
-#     Utility function performing operations on simple and small vrp instance for easier evaluating weather correct
-#     """
-#
-#     n_customers = 12
-#     n_depots = 2
-#     customers = np.zeros((n_customers,), dtype=Customer)
-#     depots = np.zeros((n_depots,), dtype=Depot)
-#     for i in range(12):
-#         customer = Customer(i + 1, i * 10, i * 5, (1 + i) * 5)
-#         customers[i] = customer
-#     for i in range(2):
-#         depot = Depot(i + 1, 10 ** (i + 1), 50 * i)
-#         depots[i] = depot
-#     vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots)
-#
-#     mutation_rate = 1.0
-#     crossover_rate = 1.0
-#     mutation = Mutation(vrp_instance, mutation_rate)
-#     crossover = Crossover(vrp_instance, crossover_rate)
-#     for i in range(100):
-#         chromosome1 = np.array([3, 1, 2, 4, 3, 3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-#         chromosome2 = np.array([1, 3, 3, 3, 4, 2, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
-#
-#         mutation.inversion(chromosome1)
-#         # crossover_new1 = crossover.uniform(chromosome1, chromosome2)
-
-
 if __name__ == "__main__":
     # Set the print options to control the display format
     np.set_printoptions(threshold=np.inf)
@@ -88,7 +59,7 @@ if __name__ == "__main__":
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 600
+    MAX_GENERATIONS = 5
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank

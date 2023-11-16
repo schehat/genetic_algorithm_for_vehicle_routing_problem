@@ -77,6 +77,7 @@ class GA:
             ("fitness", float),
             ("distance", float),
             ("time_warp", float),
+            ("duration_violation", float),
             ("diversity_contribution", float),
             ("fitness_ranked", int),
             ("diversity_control_ranked", int),
@@ -93,6 +94,7 @@ class GA:
         self.total_fitness = 0.0
         self.total_distance = 0.0
         self.total_time_warp = 0.0
+        self.total_duration_violation = 0.0
 
         self.p_complete = np.array([], dtype=int)
         self.pred_complete = np.array([], dtype=int)
@@ -105,8 +107,11 @@ class GA:
         self.n_closest_neighbors = 5
 
         self.capacity_penalty_factor = 10
-        self.duration_penalty_factor = 1
+        self.duration_penalty_factor = 5
         self.time_window_penalty = 10
+
+        self.crossover.adaptive_crossover_rate = self.k1
+        self.mutation.adaptive_mutation_rate = self.k2
 
         self.route_data = []
 
@@ -127,6 +132,7 @@ class GA:
                 self.population[i]["fitness"] = self.total_fitness
                 self.population[i]["distance"] = self.total_distance
                 self.population[i]["time_warp"] = self.total_time_warp
+                self.population[i]["duration_violation"] = self.total_duration_violation
 
             # self.calculate_biased_fitness()
 
@@ -223,6 +229,7 @@ class GA:
         self.total_fitness = 0.0
         self.total_distance = 0.0
         self.total_time_warp = 0.0
+        self.total_duration_violation = 0.0
 
         if purpose == Purpose.PLOTTING:
             self.route_data = []
@@ -276,9 +283,13 @@ class GA:
         selected_values = self.distance_complete[np.concatenate([depot_value_index])]
         self.total_distance = np.sum(selected_values)
 
-        # TODO different approach & for duration
         selected_values = self.time_warp_complete[np.concatenate([depot_value_index])]
         self.total_time_warp = np.sum(selected_values)
+
+        selected_values = self.duration_complete[np.concatenate([depot_value_index])]
+        exceeding_values = selected_values[selected_values > self.vrp_instance.max_duration_of_a_route]
+        differences = exceeding_values - self.vrp_instance.max_duration_of_a_route
+        self.total_duration_violation = np.sum(differences)
 
         zero_indices = np.where(self.p_complete == 0)[0]
         selected_values = self.p_complete[np.concatenate([zero_indices - 1])]
@@ -474,7 +485,8 @@ class GA:
 
         # Assign ranks to fitness_ranked and diversity_contribution_ranked. Start ranks from 1
         fitness_ranked[fitness_indexes] = np.arange(1, len(fitness_indexes) + 1)
-        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1, len(diversity_contribution_indexes) + 1)
+        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1,
+                                                                                  len(diversity_contribution_indexes) + 1)
 
         # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
         biased_fitness = fitness_ranked + (1 - self.elitism_percentage) * diversity_contribution_ranked
@@ -520,40 +532,41 @@ class GA:
         return: children - 1D array of the generation holding chromosome information
         """
 
-        self.crossover.adaptive_crossover_rate = self.k1
-        self.mutation.adaptive_mutation_rate = self.k2
         for individual in range(0, self.population_size, 2):
-            #     # Adaptive rates for genetic operators
-            #     min_parent_fitness = min(self.population[individual]["fitness"],
-            #                              self.population[individual + 1]["fitness"])
-            #     if min_parent_fitness >= self.fitness_stats[self.generation]["avg_scaled"]:
-            #         max_parent_fitness = max(self.population[individual]["fitness"],
-            #                                  self.population[individual + 1]["fitness"])
-            #         numerator = min_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
-            #         denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
-            #
-            #         try:
-            #             self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
-            #             self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
-            #         except ZeroDivisionError:
-            #             self.crossover.adaptive_crossover_rate = self.k1
-            #             self.mutation.adaptive_mutation_rate = self.k2
-            #     else:
-            #         self.crossover.adaptive_crossover_rate = self.k1
-            #         self.mutation.adaptive_mutation_rate = self.k2
+            # self.do_adaptive_crossover_and_mutation_rate(individual)
 
             # Generate 2 children by swapping parents in argument of crossover operation
-            children[individual] = self.crossover.order(
+            children[individual] = self.crossover.order_crossover_circular_prins(
                 self.crossover.uniform(self.population[individual]["chromosome"],
                                        self.population[individual + 1]["chromosome"]),
                 self.population[individual + 1]["chromosome"])
 
-            children[individual + 1] = self.crossover.order(
+            children[individual + 1] = self.crossover.order_crossover_circular_prins(
                 self.crossover.uniform(self.population[individual + 1]["chromosome"],
                                        self.population[individual]["chromosome"]),
                 self.population[individual]["chromosome"])
 
         return children
+
+    def do_adaptive_crossover_and_mutation_rate(self, individual: int):
+        # Adaptive rates for genetic operators
+        min_parent_fitness = min(self.population[individual]["fitness"],
+                                 self.population[individual + 1]["fitness"])
+        if min_parent_fitness >= self.fitness_stats[self.generation]["avg_scaled"]:
+            max_parent_fitness = max(self.population[individual]["fitness"],
+                                     self.population[individual + 1]["fitness"])
+            numerator = min_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
+            denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
+
+            try:
+                self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
+                self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+            except ZeroDivisionError:
+                self.crossover.adaptive_crossover_rate = self.k1
+                self.mutation.adaptive_mutation_rate = self.k2
+        else:
+            self.crossover.adaptive_crossover_rate = self.k1
+            self.mutation.adaptive_mutation_rate = self.k2
 
     def do_mutation(self, children) -> ndarray:
         """
@@ -598,7 +611,7 @@ class GA:
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
-                       f'\nSolution Description:'
+                       f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '
                        f'\ndistance {self.distance_complete}'
