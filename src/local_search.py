@@ -33,10 +33,10 @@ def two_opt_complete(ga: GA, individual: ndarray):
             new_fitness = ga.total_fitness
 
             if new_fitness < individual["fitness"]:
-                best_route = new_route
                 individual["fitness"] = new_fitness
                 individual["distance"] = ga.total_distance
-                individual["timeout"] = ga.total_timeout
+                individual["time_warp"] = ga.total_time_warp
+                individual["chromosome"] = new_route
 
 
 def two_opt_single(ga: GA, individual: ndarray):
@@ -71,7 +71,7 @@ def two_opt_single(ga: GA, individual: ndarray):
                 best_route = new_route
                 individual["fitness"] = new_fitness
                 individual["distance"] = ga.total_distance
-                individual["timeout"] = ga.total_timeout
+                individual["timeout"] = ga.total_time_warp
                 return
 
 

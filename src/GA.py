@@ -10,6 +10,7 @@ from numpy import ndarray
 from crossover import Crossover
 from mutation import Mutation
 from enums import Purpose
+from src.distance_measurement import broken_pairs_distance
 from vrp import Customer, Depot, VRPInstance
 import datetime
 
@@ -67,7 +68,7 @@ class GA:
         self.k1 = k1
         self.k2 = k2
 
-        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
+        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.3
 
         population_type = np.dtype([
             ("individual", int),
@@ -75,12 +76,15 @@ class GA:
              (self.vrp_instance.n_depots + self.vrp_instance.n_customers,)),
             ("fitness", float),
             ("distance", float),
-            ("timeout", float)
+            ("time_warp", float),
+            ("diversity_contribution", float),
+            ("fitness_ranked", int),
+            ("diversity_control_ranked", int),
+            ("biased_fitness", float)
         ])
         self.population = np.zeros(self.population_size, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
-        # Note after scaling order of fitness reversed: min fitness mapped to max_scaled
 
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
                                                                        ("max_scaled", float), ("avg_scaled", float),
@@ -88,7 +92,7 @@ class GA:
         # Total for one individual not the total of all individuals
         self.total_fitness = 0.0
         self.total_distance = 0.0
-        self.total_timeout = 0.0
+        self.total_time_warp = 0.0
 
         self.p_complete = np.array([], dtype=int)
         self.pred_complete = np.array([], dtype=int)
@@ -97,6 +101,8 @@ class GA:
         self.time_complete = np.array([], dtype=int)
         self.time_warp_complete = np.array([], dtype=int)
         self.duration_complete = np.array([], dtype=int)
+
+        self.n_closest_neighbors = 5
 
         self.capacity_penalty_factor = 10
         self.duration_penalty_factor = 1
@@ -120,7 +126,9 @@ class GA:
                 self.decode_chromosome(chromosome, Purpose.FITNESS)
                 self.population[i]["fitness"] = self.total_fitness
                 self.population[i]["distance"] = self.total_distance
-                self.population[i]["timeout"] = self.total_timeout
+                self.population[i]["time_warp"] = self.total_time_warp
+
+            self.calculate_biased_fitness()
 
             # Save statistics about raw fitness
             self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
@@ -170,50 +178,38 @@ class GA:
             if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT:
                 break
 
-        # self.local_search_complete(self, self.best_solution)
+        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
-        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        # Need to decode again to log chromosome correctly after local search
+        self.decode_chromosome(self.best_solution["chromosome"], Purpose.FITNESS)
+        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        self.plotter.plot_fitness()
+        self.plotter.plot_routes(self.best_solution["chromosome"])
+        self.log_configuration(self.best_solution)
         #
-        # self.plotter.plot_fitness()
-        # self.plotter.plot_routes(self.best_solution["chromosome"])
-        # self.log_configuration(self.best_solution)
-        self.population[0]["chromosome"] = [16, 9, 14, 9,
-                                            9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
-                                            35, 44, 31, 41, 7, 37,
-
-                                            34, 10, 45, 6, 27, 3, 48, 11,
-                                            22,
-
-                                            28, 4, 19, 14, 1, 16,
-                                            13, 33, 20, 29, 8, 5, 17, 18,
-
-                                            30,
-                                            2, 47, 24, 12, 38, 40, 21, 43
-                                            ]
-        # self.population[0]["chromosome"] = [14, 19, 8, 9,
-        #                                     44, 45, 33, 15, 37, 17,
-        #                                     42, 19, 40, 41, 13,
-        #                                     25, 18, 4,
+        # BELOW TESTING
         #
-        #                                     6, 27, 1, 32, 11, 46,
-        #                                     48, 8, 26, 31, 28, 22,
-        #                                     23, 7, 43, 24, 14,
-        #                                     12, 47,
+        # self.population[0]["chromosome"] = [16, 9, 14, 9,
+        #                                     9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
+        #                                     35, 44, 31, 41, 7, 37,
         #
-        #                                     9, 34, 30, 39, 10,
-        #                                     49, 5, 38,
+        #                                     34, 10, 45, 6, 27, 3, 48, 11,
+        #                                     22,
         #
-        #                                     35, 36, 3, 20,
-        #                                     21, 50, 16, 2, 29
+        #                                     28, 4, 19, 14, 1, 16,
+        #                                     13, 33, 20, 29, 8, 5, 17, 18,
+        #
+        #                                     30,
+        #                                     2, 47, 24, 12, 38, 40, 21, 43
         #                                     ]
-        start = time.time()
-        self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
-        end = time.time()
-        print(end - start)
-        self.population[0]["fitness"] = self.total_fitness
-        self.population[0]["distance"] = self.total_distance
-        self.population[0]["timeout"] = self.total_timeout
-        print(self.population[0])
+        # self.population[0]["chromosome"] = [12, 17,  9, 10, 45,  6, 34,  3, 27, 11, 21, 17, 42, 47,  2, 48, 10, 35, 41,  4, 36, 25, 26, 14, 33, 13, 20,  8, 29,  5, 28, 19, 32, 22, 37, 23,  9,  7, 24, 31, 44, 15, 18,  1, 16, 43, 39, 46, 30, 12, 38, 40]
+        # self.local_search_complete(self, self.population[0])
+        # self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
+        # self.population[0]["fitness"] = self.total_fitness
+        # self.population[0]["distance"] = self.total_distance
+        # self.population[0]["time_warp"] = self.total_time_warp
+        # print(self.population[0])
         # self.log_configuration(self.population[0])
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
@@ -226,7 +222,7 @@ class GA:
 
         self.total_fitness = 0.0
         self.total_distance = 0.0
-        self.total_timeout = 0.0
+        self.total_time_warp = 0.0
 
         if purpose == Purpose.PLOTTING:
             self.route_data = []
@@ -280,8 +276,9 @@ class GA:
         selected_values = self.distance_complete[np.concatenate([depot_value_index])]
         self.total_distance = np.sum(selected_values)
 
+        # TODO different approach
         selected_values = self.time_warp_complete[np.concatenate([depot_value_index])]
-        self.total_fitness = np.sum(selected_values)
+        self.total_time_warp = np.sum(selected_values)
 
         zero_indices = np.where(self.p_complete == 0)[0]
         selected_values = self.p_complete[np.concatenate([zero_indices - 1])]
@@ -460,6 +457,52 @@ class GA:
         else:
             print("ERROR: unexpected behavior")
 
+    def calculate_biased_fitness(self):
+        self.calculate_diversity_contribution()
+
+        fitness_values = self.population["fitness"]
+        diversity_control_values = self.population["diversity_contribution"]
+
+        # Calculate the ranks
+        fitness_indexes = np.argsort(fitness_values)
+        # Higher distance measurement for diversity contributes to lower ranks. Therefore, reverse array
+        diversity_contribution_indexes = np.argsort(diversity_control_values)[::-1]
+
+        # Initialize arrays to store the ranked values
+        fitness_ranked = np.zeros_like(fitness_indexes)
+        diversity_contribution_ranked = np.zeros_like(diversity_contribution_indexes)
+
+        # Assign ranks to fitness_ranked and diversity_contribution_ranked. Start ranks from 1
+        fitness_ranked[fitness_indexes] = np.arange(1, len(fitness_indexes) + 1)
+        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1, len(diversity_contribution_indexes) + 1)
+
+        # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
+        biased_fitness = fitness_ranked + (1 - self.elitism_percentage) * diversity_contribution_ranked
+
+        # Update the population array with the new values
+        self.population["fitness_ranked"] = fitness_ranked
+        self.population["diversity_contribution_ranked"] = diversity_contribution_ranked
+        self.population["biased_fitness"] = biased_fitness
+
+    def calculate_diversity_contribution(self):
+        for i, chromosome_a in enumerate(self.population["chromosome"]):
+            distances = []
+            for j, chromosome_b in enumerate(self.population["chromosome"]):
+                # Avoid calculating distance with the same chromosome
+                if i != j:
+                    distance = broken_pairs_distance(chromosome_a, chromosome_b)
+                    distances.append((j, distance))
+
+            # Sort distances and pick n_closest_neighbors
+            distances.sort(key=lambda x: x[1])
+            n_closest_neighbors = distances[:self.n_closest_neighbors]
+
+            # Calculate the average distance of the n_closest_neighbors
+            avg_distance = np.mean([dist for _, dist in n_closest_neighbors])
+
+            # Set diversity_contribution
+            self.population[i]["diversity_contribution"] = avg_distance
+
     def do_elitism(self, top_individuals: ndarray) -> None:
         """
         Perform elitism by replacing the worst individuals with the best individuals
@@ -551,11 +594,18 @@ class GA:
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nAdaptive tournament size: {self.tournament_size}'
                        f'\nElitism: {self.elitism_percentage}'
-                       f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"])}'
+                       f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])}'
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
-                       # f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'    
-                       f'\nSolution Description:\n p: {self.p_complete} \n pred: {self.pred_complete} \n load: {self.capacity_complete} \n duration: {self.duration_complete}'
+                       f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
+                       f'\nSolution Description:'
+                       f'\np: {self.p_complete} '
+                       f'\npred: {self.pred_complete} '
+                       f'\ndistance {self.distance_complete}'
+                       f'\nload: {self.capacity_complete} '
+                       f'\ntime: {self.time_complete} '
+                       f'\ntime warps: {self.time_warp_complete} '
+                       f'\nduration: {self.duration_complete}'
                        f'\n\nAll individuals: {self.population}')
 
 

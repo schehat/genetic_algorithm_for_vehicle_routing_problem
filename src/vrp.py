@@ -53,3 +53,7 @@ class VRPInstance:
         self.customers = customers
         self.depots = depots
         self.max_duration_of_a_route = max_duration_of_a_route
+
+import sys
+
+print(sys.version)
