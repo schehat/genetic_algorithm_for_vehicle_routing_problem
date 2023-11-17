@@ -79,10 +79,14 @@ class Split:
             for t in range(depot_i_n_customers):
                 distance = 0
                 current_capacity = 0
+
                 duration = 0
-                customer_pre_service = 0
+                distance_depot_start = 0
+                first_start_window = 0
+
                 time_i = 0
                 sum_time_warp = 0
+
                 i = t + 1
 
                 customer_value_i = chromosome[customer_offset + (i - 1)]
@@ -97,13 +101,14 @@ class Split:
                         distance_to_customer = self.euclidean_distance(vehicle_i_depot, customer_i)
                         distance = distance_to_customer
                         time_i = customer_i.start_time_window
+
+                        distance_depot_start = distance
+                        first_start_window = customer_i.start_time_window
                     else:
                         customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
                         customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
                         distance_to_customer = self.euclidean_distance(customer_pre_i, customer_i)
                         distance += distance_to_customer
-
-                        customer_pre_service = customer_pre_i.service_duration
 
                         # Late arrival => time warp
                         if time_i + customer_pre_i.service_duration + distance_to_customer > customer_i.end_time_window:
@@ -119,7 +124,7 @@ class Split:
                             time_i += customer_pre_i.service_duration + distance_to_customer
 
                     distance_to_depot = self.euclidean_distance(customer_i, vehicle_i_depot)
-                    duration = distance + customer_pre_service
+                    duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                     cost = distance \
                            + self.ga.duration_penalty_factor * max(0, duration - self.ga.vrp_instance.max_duration_of_a_route) \
                            + self.ga.capacity_penalty_factor * max(0, current_capacity - self.ga.vrp_instance.max_capacity) \
@@ -132,7 +137,7 @@ class Split:
                         capacity_list[i] = current_capacity
                         time_list[i] = time_i
                         time_warp_list[i] = sum_time_warp
-                        duration_list[i] = duration
+                        duration_list[i] = duration + distance_to_depot
 
                         stable = False
 
