@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 from enums import Purpose
-from GA import GA
 from vrp import Depot
 
 
@@ -15,7 +14,7 @@ class Plot:
               "yellow", "turquoise", "dodgerblue", "violet", "peru", "springgreen", "steelblue", "crimson"]
     color_i = -1
 
-    def __init__(self, ga: GA, width=8, height=6):
+    def __init__(self, ga: "GA", width=8, height=6):
         self.ga = ga
         self.width = width
         self.height = height

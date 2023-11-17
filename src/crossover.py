@@ -104,7 +104,7 @@ class Crossover:
 
         return child
 
-    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
+    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA") -> np.ndarray:
         """
         TODO
         param: parent 1 and parent 2 - 1D array
@@ -153,19 +153,48 @@ class Crossover:
             child[start_i:start_i+len(inserting_values)] = inserting_values
 
         # Add visits from parent 2
-        # TODO: check if insertion value in child is 0 then insert and break if a value != 0 is reached
-        # TODO: Then split try every insertion with minimal cost and include depot n_customers adjustment and cut the 0
-        for depot_i in a2:
+        a_mix.extend(a2)
+        np.random.shuffle(a_mix)
+        for depot_i in a_mix:
             n_customers = parent2[depot_i]
             start_i = np.sum(parent2[:depot_i]) + self.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             # Collect values from parent2 that are not already in the child
             inserting_values = [parent2[i] for i in range(start_i, end_i) if parent2[i] not in child]
-            # Insert the values into the child at the calculated positions
-            child[start_i:start_i+len(inserting_values)] = inserting_values
 
-        # Print or use the assigned values
-        print("a1:", a1)
-        print("a2:", a2)
-        print("a_mix:", a_mix)
+            # Adjust indexes to parent1 to match correct depot range
+            n_customers = parent1[depot_i]
+            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            end_i = start_i + n_customers
+
+            for i in range(end_i - start_i):
+                # Exhausted all values
+                if len(inserting_values) == 0:
+                    break
+                # Insert at the end and decrease every step
+                if child[end_i - i - 1] == 0:
+                    # To not change order of inserting_values insert in reversed order
+                    child[end_i - i - 1] = inserting_values.pop()
+                else:
+                    # Stop inserting even if not all values are exhausted
+                    break
+
+        for depot_i in range(self.vrp_instance.n_depots):
+            n_customers = parent1[depot_i]
+
+            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            end_i = start_i + n_customers
+
+            # Count non-zero values in the specified range
+            customer_count = np.count_nonzero(child[start_i:end_i] != 0)
+
+            # Assign the count to the corresponding depot index in the child
+            child[depot_i] = customer_count
+
+        # TODO: Then split try every insertion with minimal cost and include depot n_customers adjustment and cut the 0
+        non_zero_indices = child != 0
+        child = child[non_zero_indices]
+        print(child)
+
+

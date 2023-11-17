@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import Pool, Value
+from multiprocessing import Value
 
 import numpy as np
 from numpy import ndarray

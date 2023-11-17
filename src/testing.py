@@ -4,7 +4,7 @@ from src.crossover import Crossover
 from src.mutation import Mutation
 from src.vrp import Customer, Depot, VRPInstance
 
-n_customers = 50
+n_customers = 40
 n_depots = 4
 customers = np.zeros((n_customers,), dtype=Customer)
 depots = np.zeros((n_depots,), dtype=Depot)

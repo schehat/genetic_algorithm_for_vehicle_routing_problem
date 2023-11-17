@@ -1,17 +1,18 @@
 import os
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Tuple
+from typing import Callable
 
 import numpy as np
 from numpy import ndarray
 
-from crossover import Crossover
 from mutation import Mutation
 from enums import Purpose
 from src.distance_measurement import broken_pairs_distance
+from src.split import Split
 from vrp import Customer, Depot, VRPInstance
+from crossover import Crossover
+from plot import Plot
 import datetime
 
 
@@ -69,6 +70,7 @@ class GA:
         self.k2 = k2
 
         self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
+        self.split = Split(self)
 
         population_type = np.dtype([
             ("individual", int),
@@ -107,7 +109,7 @@ class GA:
         self.n_closest_neighbors = 5
 
         self.capacity_penalty_factor = 10
-        self.duration_penalty_factor = 5
+        self.duration_penalty_factor = 1
         self.time_window_penalty = 10
 
         self.crossover.adaptive_crossover_rate = self.k1
@@ -184,39 +186,40 @@ class GA:
             if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT:
                 break
 
-        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        self.local_search_complete(self, self.best_solution)
+        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        # self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
-        # Need to decode again to log chromosome correctly after local search
-        self.decode_chromosome(self.best_solution["chromosome"], Purpose.FITNESS)
-        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        self.plotter.plot_fitness()
-        self.plotter.plot_routes(self.best_solution["chromosome"])
-        self.log_configuration(self.best_solution)
+        # # Need to decode again to log chromosome correctly after local search
+        # self.decode_chromosome(self.best_solution["chromosome"], Purpose.FITNESS)
+        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        # self.plotter.plot_fitness()
+        # self.plotter.plot_routes(self.best_solution["chromosome"])
+        # self.log_configuration(self.best_solution)
         #
         # BELOW TESTING
         #
-        # self.population[0]["chromosome"] = [16, 9, 14, 9,
-        #                                     9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
-        #                                     35, 44, 31, 41, 7, 37,
-        #
-        #                                     34, 10, 45, 6, 27, 3, 48, 11,
-        #                                     22,
-        #
-        #                                     28, 4, 19, 14, 1, 16,
-        #                                     13, 33, 20, 29, 8, 5, 17, 18,
-        #
-        #                                     30,
-        #                                     2, 47, 24, 12, 38, 40, 21, 43
-        #                                     ]
+        self.population[0]["chromosome"] = [16, 9, 14, 9,
+                                            9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
+                                            35, 44, 31, 41, 7, 37,
+
+                                            34, 10, 45, 6, 27, 3, 48, 11,
+                                            22,
+
+                                            28, 4, 19, 14, 1, 16,
+                                            13, 33, 20, 29, 8, 5, 17, 18,
+
+                                            30,
+                                            2, 47, 24, 12, 38, 40, 21, 43
+                                            ]
         # self.population[0]["chromosome"] = [12, 17,  9, 10, 45,  6, 34,  3, 27, 11, 21, 17, 42, 47,  2, 48, 10, 35, 41,  4, 36, 25, 26, 14, 33, 13, 20,  8, 29,  5, 28, 19, 32, 22, 37, 23,  9,  7, 24, 31, 44, 15, 18,  1, 16, 43, 39, 46, 30, 12, 38, 40]
         # self.local_search_complete(self, self.population[0])
-        # self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
-        # self.population[0]["fitness"] = self.total_fitness
-        # self.population[0]["distance"] = self.total_distance
-        # self.population[0]["time_warp"] = self.total_time_warp
-        # print(self.population[0])
-        # self.log_configuration(self.population[0])
+        self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
+        self.population[0]["fitness"] = self.total_fitness
+        self.population[0]["distance"] = self.total_distance
+        self.population[0]["time_warp"] = self.total_time_warp
+        self.population[0]["duration_violation"] = self.total_duration_violation
+        print(self.population[0])
+        self.log_configuration(self.population[0])
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
         """
@@ -234,7 +237,7 @@ class GA:
         if purpose == Purpose.PLOTTING:
             self.route_data = []
 
-        self.split(chromosome)
+        self.split.split(chromosome)
         i_route = 0
 
         i_depot = -1
@@ -294,156 +297,6 @@ class GA:
         zero_indices = np.where(self.p_complete == 0)[0]
         selected_values = self.p_complete[np.concatenate([zero_indices - 1])]
         self.total_fitness = np.sum(selected_values)
-
-    def split(self, chromosome: ndarray) -> None:
-        # Determine indices for chromosome "splitting"
-        customer_index = self.vrp_instance.n_depots
-        customer_index_list = [customer_index]
-        for depot_i in range(self.vrp_instance.n_depots - 1):
-            customer_index += chromosome[depot_i]
-            customer_index_list.append(customer_index)
-
-        # Initial list gets appended with lists of single depot split
-        p_complete = []
-        pred_complete = []
-        distance_complete = []
-        capacity_complete = []
-        time_complete = []
-        time_warp_complete = []
-        duration_complete = []
-
-        # Parallel execution
-        with ThreadPoolExecutor() as executor:
-            results = [executor.submit(self._split_single_depot, chromosome, depot_i, customer_index_list[x]) for
-                       x, depot_i in enumerate(range(self.vrp_instance.n_depots))]
-            for future in results:
-                p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = future.result()
-                p_complete += p
-                pred_complete += pred
-                distance_complete += distance_list
-                capacity_complete += capacity_list
-                time_complete += time_list
-                time_warp_complete += time_warp_list
-                duration_complete += duration_list
-
-        # Convert list to array for performance
-        self.p_complete = np.array(p_complete)
-        self.pred_complete = np.array(pred_complete)
-        self.distance_complete = np.array(distance_complete)
-        self.capacity_complete = np.array(capacity_complete)
-        self.time_complete = np.array(time_complete)
-        self.time_warp_complete = np.array(time_warp_complete)
-        self.duration_complete = np.array(duration_complete)
-
-    def _split_single_depot(self, chromosome, depot_i, customer_offset) -> Tuple[
-        list, list, list, list, list, list, list]:
-        depot_i_n_customers = chromosome[depot_i]
-        vehicle_i_depot: Depot = self.vrp_instance.depots[depot_i]
-
-        # Shortest path containing cost
-        p1 = [float('inf') if i > 0 else 0 for i in range(depot_i_n_customers + 1)]
-        # Copy for fleet size constraint
-        p2 = p1.copy()
-        # Note from which node path comes from to build path
-        pred = [0] * (depot_i_n_customers + 1)
-        # Accumulating values for every depot. Resetting value to 0 for every next depot
-        distance_list = [0] * (depot_i_n_customers + 1)
-        capacity_list = [0] * (depot_i_n_customers + 1)
-        time_list = [0] * (depot_i_n_customers + 1)
-        time_warp_list = [0] * (depot_i_n_customers + 1)
-        duration_list = [0] * (depot_i_n_customers + 1)
-
-        # number of arcs
-        k = 0
-
-        while True:
-            k += 1
-            # Flag to detect modified labels
-            stable = True
-
-            for t in range(depot_i_n_customers):
-                distance = 0
-                current_capacity = 0
-                duration = 0
-                time_i = 0
-                sum_time_warp = 0
-                i = t + 1
-
-                customer_value_i = chromosome[customer_offset + (i - 1)]
-                # Indexing of customers starts with 1 not 0, so -1 necessary
-                customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
-
-                # 2 * Capacity to allow infeasible solution for better space search
-                while i <= depot_i_n_customers and current_capacity + customer_i.demand <= 2 * self.vrp_instance.max_capacity:
-
-                    current_capacity += customer_i.demand
-                    if i == t + 1:
-                        distance_to_customer = self.euclidean_distance(vehicle_i_depot, customer_i)
-                        distance = distance_to_customer
-                        time_i = customer_i.start_time_window
-                    else:
-                        customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
-                        customer_pre_i: Customer = self.vrp_instance.customers[customer_value_pre_i - 1]
-                        distance_to_customer = self.euclidean_distance(customer_pre_i, customer_i)
-                        distance += distance_to_customer
-
-                        # Late arrival => time warp
-                        if time_i + customer_pre_i.service_duration + distance_to_customer > customer_i.end_time_window:
-                            sum_time_warp += max(
-                                time_i + customer_pre_i.service_duration + distance_to_customer - customer_i.end_time_window,
-                                0)
-                            time_i = customer_i.end_time_window
-                        # Early arrival => wait
-                        elif time_i + customer_pre_i.service_duration + distance_to_customer < customer_i.start_time_window:
-                            time_i = customer_i.start_time_window
-                        # In time window
-                        else:
-                            time_i += customer_pre_i.service_duration + distance_to_customer
-
-                    distance_to_depot = self.euclidean_distance(customer_i, vehicle_i_depot)
-                    cost = distance \
-                           + self.duration_penalty_factor * max(0, duration - self.vrp_instance.max_duration_of_a_route) \
-                           + self.capacity_penalty_factor * max(0, current_capacity - self.vrp_instance.max_capacity) \
-                           + self.time_window_penalty * sum_time_warp
-                    # if new solution better than current then update labels
-                    if p1[t] + cost + distance_to_depot < p2[i]:
-                        p2[i] = p1[t] + cost + distance_to_depot
-                        pred[i] = t
-                        distance_list[i] = distance + distance_to_depot
-                        capacity_list[i] = current_capacity
-                        time_list[i] = time_i
-                        time_warp_list[i] = sum_time_warp
-                        duration_list[i] = time_list[i] + time_warp_list[i]
-
-                        stable = False
-
-                    i += 1
-
-                    # Bounds check
-                    if customer_offset + (i - 1) < self.vrp_instance.n_depots + self.vrp_instance.n_customers:
-                        customer_value_i = chromosome[customer_offset + (i - 1)]
-                        customer_i: Customer = self.vrp_instance.customers[customer_value_i - 1]
-                    else:
-                        break
-
-            # we have the paths with <= k arcs
-            p1 = p2.copy()
-
-            # Loop until stable or fleet exhausted
-            if stable or k == self.vrp_instance.n_vehicles:
-                break
-
-        return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
-
-    @staticmethod
-    def euclidean_distance(obj1, obj2) -> float:
-        """
-        Calculate fitness for a single chromosome
-        param: obj1 and obj2 - Customers or Depots
-        """
-
-        return np.linalg.norm(
-            np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
 
     def collect_routes(self, obj, from_vehicle_i) -> None:
         """
@@ -620,6 +473,3 @@ class GA:
                        f'\ntime warps: {self.time_warp_complete} '
                        f'\nduration: {self.duration_complete}'
                        f'\n\nAll individuals: {self.population}')
-
-
-from plot import Plot
