@@ -192,9 +192,33 @@ class Crossover:
             # Assign the count to the corresponding depot index in the child
             child[depot_i] = customer_count
 
-        # TODO: Then split try every insertion with minimal cost and include depot n_customers adjustment and cut the 0
         non_zero_indices = child != 0
         child = child[non_zero_indices]
-        print(child)
+
+        all_customers = list(range(1, self.vrp_instance.n_customers + 1))
+        existing_customers = list(child[self.vrp_instance.n_depots:])
+        missing_customers = np.setdiff1d(all_customers, existing_customers)
+
+        for m_customer in missing_customers:
+            best_fitness = float("inf")
+            best_position = None
+
+            for i in range(self.vrp_instance.n_depots, len(child) + 1):
+                temp_child = child.copy()
+                temp_child = np.insert(temp_child, i, m_customer)
+
+                ga.split.split(temp_child)
+
+                zero_indices = np.where(ga.p_complete == 0)[0]
+                selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
+                ga.total_fitness = np.sum(selected_values)
+
+                if ga.total_fitness < best_fitness:
+                    best_fitness = ga.total_fitness
+                    best_position = i
+
+            # Add m_customer at best_position final state
+            child = np.insert(child, best_position, m_customer)
+
 
 

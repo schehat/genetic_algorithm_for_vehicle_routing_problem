@@ -1,7 +1,13 @@
 import numpy as np
 
+from src.GA import GA
 from src.crossover import Crossover
+from src.fitness_scaling import power_rank
+from src.initial_population import initial_population_grouping_savings_nnh
+from src.local_search import two_opt_single, two_opt_complete
+from src.main import read_cordeau_instance
 from src.mutation import Mutation
+from src.selection import n_tournaments
 from src.vrp import Customer, Depot, VRPInstance
 
 n_customers = 40
@@ -22,11 +28,45 @@ mutation = Mutation(vrp_instance, mutation_rate)
 crossover = Crossover(vrp_instance, crossover_rate)
 crossover.adaptive_crossover_rate = 1.0
 mutation.adaptive_mutation_rate = 1.0
+
+# Create vrp instance
+INSTANCE_FILE_PATH = "../benchmark/c-mdvrptw/pr01"
+VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
+
+# Set GA parameters
+POPULATION_SIZE = 100
+CROSSOVER_RATE = 0.5
+MUTATION_RATE = 0.5
+MAX_GENERATIONS = 1
+INITIAL_POPULATION = initial_population_grouping_savings_nnh
+# INITIAL_POPULATION = initial_population_random
+FITNESS_SCALING = power_rank
+SELECTION_METHOD = n_tournaments
+LOCAL_SEARCH_COMPLETE = two_opt_complete
+LOCAL_SEARCH_SINGLE = two_opt_single
+tournament_size = 2
+elitism_percentage = 0.1
+
+# Configure GA and run
+ga = GA(VRP_INSTANCE,
+        POPULATION_SIZE,
+        CROSSOVER_RATE,
+        MUTATION_RATE,
+        MAX_GENERATIONS,
+        INITIAL_POPULATION,
+        FITNESS_SCALING,
+        SELECTION_METHOD,
+        LOCAL_SEARCH_COMPLETE,
+        LOCAL_SEARCH_SINGLE,
+        tournament_size=tournament_size,
+        elitism_percentage=elitism_percentage)
+
 for i in range(100):
     random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
     chromosome1 = np.concatenate((np.array([9, 7, 13, 11]), random_permutation))
     chromosome2 = np.concatenate((np.array([12, 9, 11, 8]), random_permutation))
 
     # mutation.inversion(chromosome1)
-    crossover_new1 = crossover.periodic_crossover_with_insertions(chromosome1, chromosome2)
+
+    crossover_new1 = crossover.periodic_crossover_with_insertions(chromosome1, chromosome2, ga)
     print(f"c1: {crossover_new1}")

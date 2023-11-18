@@ -130,7 +130,7 @@ class GA:
         for self.generation in range(self.max_generations):
             # Fitness evaluation
             for i, chromosome in enumerate(self.population["chromosome"]):
-                self.decode_chromosome(chromosome, Purpose.FITNESS)
+                self.decode_chromosome(chromosome)
                 self.population[i]["fitness"] = self.total_fitness
                 self.population[i]["distance"] = self.total_distance
                 self.population[i]["time_warp"] = self.total_time_warp
@@ -190,7 +190,7 @@ class GA:
         # self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
         # # Need to decode again to log chromosome correctly after local search
-        # self.decode_chromosome(self.best_solution["chromosome"], Purpose.FITNESS)
+        # self.decode_chromosome(self.best_solution["chromosome"])
         # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         # self.plotter.plot_fitness()
         # self.plotter.plot_routes(self.best_solution["chromosome"])
@@ -213,7 +213,7 @@ class GA:
                                             ]
         # self.population[0]["chromosome"] = [12, 17,  9, 10, 45,  6, 34,  3, 27, 11, 21, 17, 42, 47,  2, 48, 10, 35, 41,  4, 36, 25, 26, 14, 33, 13, 20,  8, 29,  5, 28, 19, 32, 22, 37, 23,  9,  7, 24, 31, 44, 15, 18,  1, 16, 43, 39, 46, 30, 12, 38, 40]
         # self.local_search_complete(self, self.population[0])
-        self.decode_chromosome(self.population[0]["chromosome"], Purpose.FITNESS)
+        self.decode_chromosome(self.population[0]["chromosome"])
         self.population[0]["fitness"] = self.total_fitness
         self.population[0]["distance"] = self.total_distance
         self.population[0]["time_warp"] = self.total_time_warp
@@ -221,7 +221,7 @@ class GA:
         print(self.population[0])
         self.log_configuration(self.population[0])
 
-    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose) -> None:
+    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> None:
         """
         Decoding chromosome by traversing the genes considering constraints and fetching the routes.
         Expecting a purpose to evaluate which operation should be used

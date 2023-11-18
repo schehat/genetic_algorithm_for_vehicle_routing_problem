@@ -29,7 +29,7 @@ def two_opt_complete(ga: GA, individual: ndarray):
             new_route[i + 1] = edge_j[0]
             new_route[j] = edge_i[1]
 
-            ga.decode_chromosome(new_route, Purpose.FITNESS)
+            ga.decode_chromosome(new_route)
             new_fitness = ga.total_fitness
 
             if new_fitness < individual["fitness"]:
