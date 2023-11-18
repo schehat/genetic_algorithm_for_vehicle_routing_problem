@@ -202,23 +202,40 @@ class Crossover:
         for m_customer in missing_customers:
             best_fitness = float("inf")
             best_position = None
+            depot_assignment = None
 
-            for i in range(self.vrp_instance.n_depots, len(child) + 1):
-                temp_child = child.copy()
-                temp_child = np.insert(temp_child, i, m_customer)
+            customer_offset = self.vrp_instance.n_depots
 
-                ga.split.split(temp_child)
+            for depot_i in range(self.vrp_instance.n_depots):
+                depot_n_customers = child[depot_i]
 
-                zero_indices = np.where(ga.p_complete == 0)[0]
-                selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
-                ga.total_fitness = np.sum(selected_values)
+                # Range +1 to also insert after last index
+                for customer_i in range(depot_n_customers + 1):
 
-                if ga.total_fitness < best_fitness:
-                    best_fitness = ga.total_fitness
-                    best_position = i
+                    # Enable only insert position after depot range if last depot
+                    if customer_i == depot_n_customers and depot_i != self.vrp_instance.n_depots - 1:
+                        continue
+
+                    temp_child = child.copy()
+                    temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
+
+                    ga.split.split(temp_child)
+
+                    zero_indices = np.where(ga.p_complete == 0)[0]
+                    selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
+                    ga.total_fitness = np.sum(selected_values)
+
+                    if ga.total_fitness < best_fitness:
+                        best_fitness = ga.total_fitness
+                        best_position = customer_offset + customer_i
+                        depot_assignment = depot_i
+
+                customer_offset += depot_n_customers
 
             # Add m_customer at best_position final state
             child = np.insert(child, best_position, m_customer)
+            # Increment the customer count for the corresponding depot
+            child[depot_assignment] += 1
 
 
 
