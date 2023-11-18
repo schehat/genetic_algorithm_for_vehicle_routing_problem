@@ -186,40 +186,40 @@ class GA:
             if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT:
                 break
 
-        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        # self.local_search_complete(self, self.best_solution)
+        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
-        # # Need to decode again to log chromosome correctly after local search
-        # self.decode_chromosome(self.best_solution["chromosome"])
-        # print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-        # self.plotter.plot_fitness()
-        # self.plotter.plot_routes(self.best_solution["chromosome"])
-        # self.log_configuration(self.best_solution)
+        # Need to decode again to log chromosome correctly after local search
+        self.decode_chromosome(self.best_solution["chromosome"])
+        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        self.plotter.plot_fitness()
+        self.plotter.plot_routes(self.best_solution["chromosome"])
+        self.log_configuration(self.best_solution)
         #
         # BELOW TESTING
         #
-        self.population[0]["chromosome"] = [16, 9, 14, 9,
-                                            9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
-                                            35, 44, 31, 41, 7, 37,
-
-                                            34, 10, 45, 6, 27, 3, 48, 11,
-                                            22,
-
-                                            28, 4, 19, 14, 1, 16,
-                                            13, 33, 20, 29, 8, 5, 17, 18,
-
-                                            30,
-                                            2, 47, 24, 12, 38, 40, 21, 43
-                                            ]
+        # self.population[0]["chromosome"] = [16, 9, 14, 9,
+        #                                     9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
+        #                                     35, 44, 31, 41, 7, 37,
+        #
+        #                                     34, 10, 45, 6, 27, 3, 48, 11,
+        #                                     22,
+        #
+        #                                     28, 4, 19, 14, 1, 16,
+        #                                     13, 33, 20, 29, 8, 5, 17, 18,
+        #
+        #                                     30,
+        #                                     2, 47, 24, 12, 38, 40, 21, 43
+        #                                     ]
         # self.population[0]["chromosome"] = [12, 17,  9, 10, 45,  6, 34,  3, 27, 11, 21, 17, 42, 47,  2, 48, 10, 35, 41,  4, 36, 25, 26, 14, 33, 13, 20,  8, 29,  5, 28, 19, 32, 22, 37, 23,  9,  7, 24, 31, 44, 15, 18,  1, 16, 43, 39, 46, 30, 12, 38, 40]
         # self.local_search_complete(self, self.population[0])
-        self.decode_chromosome(self.population[0]["chromosome"])
-        self.population[0]["fitness"] = self.total_fitness
-        self.population[0]["distance"] = self.total_distance
-        self.population[0]["time_warp"] = self.total_time_warp
-        self.population[0]["duration_violation"] = self.total_duration_violation
-        print(self.population[0])
-        self.log_configuration(self.population[0])
+        # self.decode_chromosome(self.population[0]["chromosome"])
+        # self.population[0]["fitness"] = self.total_fitness
+        # self.population[0]["distance"] = self.total_distance
+        # self.population[0]["time_warp"] = self.total_time_warp
+        # self.population[0]["duration_violation"] = self.total_duration_violation
+        # print(self.population[0])
+        # self.log_configuration(self.population[0])
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> None:
         """
@@ -389,15 +389,15 @@ class GA:
             # self.do_adaptive_crossover_and_mutation_rate(individual)
 
             # Generate 2 children by swapping parents in argument of crossover operation
-            children[individual] = self.crossover.order_crossover_circular_prins(
-                self.crossover.uniform(self.population[individual]["chromosome"],
-                                       self.population[individual + 1]["chromosome"]),
-                self.population[individual + 1]["chromosome"])
+            children[individual] = self.crossover.periodic_crossover_with_insertions(
+                                        self.population[individual]["chromosome"],
+                                        self.population[individual + 1]["chromosome"],
+                                        self)
 
-            children[individual + 1] = self.crossover.order_crossover_circular_prins(
-                self.crossover.uniform(self.population[individual + 1]["chromosome"],
-                                       self.population[individual]["chromosome"]),
-                self.population[individual]["chromosome"])
+            children[individual + 1] = self.crossover.periodic_crossover_with_insertions(
+                                        self.population[individual + 1]["chromosome"],
+                                        self.population[individual]["chromosome"],
+                                        self)
 
         return children
 
@@ -429,7 +429,7 @@ class GA:
         """
 
         for i in range(0, self.population_size):
-            self.mutation.uniform(children[i])
+            # self.mutation.uniform(children[i])
             rand_num = random.random()
             if rand_num < 0.33:
                 self.mutation.swap(children[i])

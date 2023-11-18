@@ -128,7 +128,7 @@ class Crossover:
         # Add visits from parent 1
         for depot_i in a1:
             n_customers = parent1[depot_i]
-            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             # Copy customers from parent1 to child
@@ -137,12 +137,16 @@ class Crossover:
         # Add visits from parent 1 for a_mix
         for depot_i in a_mix:
             n_customers = parent1[depot_i]
-            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             # Select two points i and j with uniform distribution
-            i, j = np.random.choice(range(n_customers), size=2, replace=False)
-            i, j = min(i, j), max(i, j)
+            if n_customers >= 2:
+                i, j = np.random.choice(range(n_customers), size=2, replace=False)
+                i, j = min(i, j), max(i, j)
+            else:
+                i, j = np.random.choice(range(n_customers), size=2, replace=True)
+                i, j = min(i, j), max(i, j)
 
             # Include value in start_i + i
             inserting_values = []
@@ -157,7 +161,7 @@ class Crossover:
         np.random.shuffle(a_mix)
         for depot_i in a_mix:
             n_customers = parent2[depot_i]
-            start_i = np.sum(parent2[:depot_i]) + self.vrp_instance.n_depots
+            start_i = np.sum(parent2[:depot_i]) + ga.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             # Collect values from parent2 that are not already in the child
@@ -165,12 +169,12 @@ class Crossover:
 
             # Adjust indexes to parent1 to match correct depot range
             n_customers = parent1[depot_i]
-            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             for i in range(end_i - start_i):
                 # Exhausted all values
-                if len(inserting_values) == 0:
+                if len(inserting_values) == 0 or end_i - i - 1 < ga.vrp_instance.n_depots:
                     break
                 # Insert at the end and decrease every step
                 if child[end_i - i - 1] == 0:
@@ -180,10 +184,10 @@ class Crossover:
                     # Stop inserting even if not all values are exhausted
                     break
 
-        for depot_i in range(self.vrp_instance.n_depots):
+        for depot_i in range(ga.vrp_instance.n_depots):
             n_customers = parent1[depot_i]
 
-            start_i = np.sum(parent1[:depot_i]) + self.vrp_instance.n_depots
+            start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
             end_i = start_i + n_customers
 
             # Count non-zero values in the specified range
@@ -192,28 +196,37 @@ class Crossover:
             # Assign the count to the corresponding depot index in the child
             child[depot_i] = customer_count
 
+        if np.sum(child[:ga.vrp_instance.n_depots]) > ga.vrp_instance.n_customers:
+            print(child)
+
         non_zero_indices = child != 0
         child = child[non_zero_indices]
 
-        all_customers = list(range(1, self.vrp_instance.n_customers + 1))
-        existing_customers = list(child[self.vrp_instance.n_depots:])
+        if np.sum(child[:ga.vrp_instance.n_depots]) > ga.vrp_instance.n_customers:
+            print(child)
+
+        all_customers = list(range(1, ga.vrp_instance.n_customers + 1))
+        existing_customers = list(child[ga.vrp_instance.n_depots:])
         missing_customers = np.setdiff1d(all_customers, existing_customers)
 
         for m_customer in missing_customers:
             best_fitness = float("inf")
-            best_position = None
-            depot_assignment = None
+            best_position = ga.vrp_instance.n_depots
+            depot_assignment = 0
+            n_improvements = 0
 
-            customer_offset = self.vrp_instance.n_depots
+            customer_offset = ga.vrp_instance.n_depots
 
-            for depot_i in range(self.vrp_instance.n_depots):
+            for depot_i in range(ga.vrp_instance.n_depots):
+                # print(f"child: {child}, len: {len(child)}")
+                # print(f"missing_customers: {missing_customers}")
                 depot_n_customers = child[depot_i]
 
                 # Range +1 to also insert after last index
-                for customer_i in range(depot_n_customers + 1):
+                for customer_i in range(0, depot_n_customers + 1, 2):
 
                     # Enable only insert position after depot range if last depot
-                    if customer_i == depot_n_customers and depot_i != self.vrp_instance.n_depots - 1:
+                    if customer_i == depot_n_customers and depot_i != ga.vrp_instance.n_depots - 1:
                         continue
 
                     temp_child = child.copy()
@@ -229,13 +242,20 @@ class Crossover:
                         best_fitness = ga.total_fitness
                         best_position = customer_offset + customer_i
                         depot_assignment = depot_i
+                        n_improvements += 1
+                        if n_improvements >= 2:
+                            break
 
                 customer_offset += depot_n_customers
+                if n_improvements >= 2:
+                            break
 
             # Add m_customer at best_position final state
             child = np.insert(child, best_position, m_customer)
             # Increment the customer count for the corresponding depot
             child[depot_assignment] += 1
+
+        return child
 
 
 
