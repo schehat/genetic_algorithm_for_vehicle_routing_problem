@@ -134,34 +134,32 @@ class Crossover:
             # Copy customers from parent1 to child
             child[start_i:end_i] = parent1[start_i:end_i]
 
-        try:
-            # TODO: try in ga call. just ignore errors, debugging too hard
-            # Add visits from parent 1 for a_mix
-            for depot_i in a_mix:
-                n_customers = parent1[depot_i]
-                start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
-                end_i = start_i + n_customers
+        # TODO: try in ga call. just ignore errors, debugging too hard
+        # Add visits from parent 1 for a_mix
+        for depot_i in a_mix:
+            n_customers = parent1[depot_i]
+            start_i = np.sum(parent1[:depot_i]) + ga.vrp_instance.n_depots
+            end_i = start_i + n_customers
 
-                # Select two points i and j with uniform distribution
-                if n_customers >= 2:
-                    i, j = np.random.choice(range(n_customers), size=2, replace=False)
-                    i, j = min(i, j), max(i, j)
-                else:
-                    if n_customers == 0:
-                        continue
-                    else:
-                        inserting_values = parent1[start_i]
-                        child[start_i] = inserting_values
-                        continue
+            # Select two points i and j with uniform distribution
+            # if n_customers >= 2:
+            if n_customers > 1:
+                i, j = np.random.choice(range(n_customers), size=2, replace=False)
+                i, j = min(i, j), max(i, j)
+            else:
+                i = 0
 
-                # Include value in start_i + i
-                inserting_values = []
-                inserting_values.extend(parent1[start_i: start_i + i + 1])
+            # Include value in start_i + i
+            inserting_values = []
+            inserting_values.extend(parent1[start_i: start_i + i + 1])
+            if i != 0:
+                inserting_values.extend(parent1[start_i+j: end_i])
 
-                # Copy selected range from parent1 to child
+            # Copy selected range from parent1 to child
+            try:
                 child[start_i:start_i + len(inserting_values)] = inserting_values
-        except:
-            print("Error")
+            except:
+                print("Error")
 
         # Add visits from parent 2
         a_mix.extend(a2)
@@ -203,22 +201,25 @@ class Crossover:
             # Assign the count to the corresponding depot index in the child
             child[depot_i] = customer_count
 
-        if np.sum(child[:ga.vrp_instance.n_depots]) > ga.vrp_instance.n_customers:
-            print(child)
+        # # Extract the segment related to customers
+        # customer_segment = child[ga.vrp_instance.n_depots:]
+        # # Remove duplicates. In some rare cases duplicates exist. TODO: fix duplicates
+        # unique_customer_segment = np.array(list(set(customer_segment)))
+        # # Find the non-zero indices in the customer segment
+        # non_zero_indices = unique_customer_segment != 0
+        # # Update the customer segment with only non-zero values
+        # unique_customer_segment = unique_customer_segment[non_zero_indices]
+        # # Update the child array with the modified customer segment
+        # child = np.concatenate((child[:ga.vrp_instance.n_depots], unique_customer_segment))
 
         # Extract the segment related to customers
         customer_segment = child[ga.vrp_instance.n_depots:]
-        # Remove duplicates. In some rare cases duplicates exist. TODO: fix duplicates
-        unique_customer_segment = np.unique(customer_segment)
         # Find the non-zero indices in the customer segment
-        non_zero_indices = unique_customer_segment != 0
+        non_zero_indices = customer_segment != 0
         # Update the customer segment with only non-zero values
-        unique_customer_segment = unique_customer_segment[non_zero_indices]
+        customer_segment = customer_segment[non_zero_indices]
         # Update the child array with the modified customer segment
-        child = np.concatenate((child[:ga.vrp_instance.n_depots], unique_customer_segment))
-
-        if np.sum(child[:ga.vrp_instance.n_depots]) > ga.vrp_instance.n_customers:
-            print(child)
+        child = np.concatenate((child[:ga.vrp_instance.n_depots], customer_segment))
 
         all_customers = list(range(1, ga.vrp_instance.n_customers + 1))
         existing_customers = list(child[ga.vrp_instance.n_depots:])
@@ -233,8 +234,6 @@ class Crossover:
             customer_offset = ga.vrp_instance.n_depots
 
             for depot_i in range(ga.vrp_instance.n_depots):
-                # print(f"child: {child}, len: {len(child)}")
-                # print(f"missing_customers: {missing_customers}")
                 depot_n_customers = child[depot_i]
 
                 # Range +1 to also insert after last index
@@ -245,9 +244,6 @@ class Crossover:
                         continue
 
                     temp_child = child.copy()
-
-                    if np.sum(child[:ga.vrp_instance.n_depots]) > len(child[ga.vrp_instance.n_depots:]):
-                        print(child)
 
                     temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
                     temp_child[depot_i] += 1
@@ -274,7 +270,4 @@ class Crossover:
             # Increment the customer count for the corresponding depot
             child[depot_assignment] += 1
 
-        # TODO remove duplicate and adjust depot n_customers
-        if len(child) != ga.vrp_instance.n_depots + ga.vrp_instance.n_customers:
-            print(child)
         return child

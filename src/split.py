@@ -89,11 +89,8 @@ class Split:
 
                 i = t + 1
 
-                try:
-                    customer_value_i = chromosome[customer_offset + (i - 1)]
-                    customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
-                except IndexError:
-                    print(f"\n Error \n customer offset{customer_offset}, i: {i}, chromosome: {chromosome}")
+                customer_value_i = chromosome[customer_offset + (i - 1)]
+                customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
 
                 # 2 * Capacity to allow infeasible solution for better space search
                 while i <= depot_i_n_customers and current_capacity + customer_i.demand <= 2 * self.ga.vrp_instance.max_capacity:
