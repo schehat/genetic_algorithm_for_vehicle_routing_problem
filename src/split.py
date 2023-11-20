@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from numpy import ndarray
 
+from src.distance_measurement import euclidean_distance
 from src.vrp import Depot, Customer
 
 
@@ -97,7 +98,7 @@ class Split:
 
                     current_capacity += customer_i.demand
                     if i == t + 1:
-                        distance_to_customer = self.euclidean_distance(vehicle_i_depot, customer_i)
+                        distance_to_customer = euclidean_distance(vehicle_i_depot, customer_i)
                         distance = distance_to_customer
                         time_i = customer_i.start_time_window
 
@@ -106,7 +107,7 @@ class Split:
                     else:
                         customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
                         customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
-                        distance_to_customer = self.euclidean_distance(customer_pre_i, customer_i)
+                        distance_to_customer = euclidean_distance(customer_pre_i, customer_i)
                         distance += distance_to_customer
 
                         # Late arrival => time warp
@@ -122,7 +123,7 @@ class Split:
                         else:
                             time_i += customer_pre_i.service_duration + distance_to_customer
 
-                    distance_to_depot = self.euclidean_distance(customer_i, vehicle_i_depot)
+                    distance_to_depot = euclidean_distance(customer_i, vehicle_i_depot)
                     duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                     cost = distance \
                            + self.ga.duration_penalty_factor * max(0, duration - self.ga.vrp_instance.max_duration_of_a_route) \
@@ -154,20 +155,14 @@ class Split:
                         stable = False
                         break
 
+            # print(f"k: {k}")
             # we have the paths with <= k arcs
             p1 = p2.copy()
 
             # Loop until stable or fleet exhausted
             if stable or k == self.ga.vrp_instance.n_vehicles:
+                # print("break")
                 break
 
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
 
-    @staticmethod
-    def euclidean_distance(obj1, obj2) -> float:
-        """
-        Calculate fitness for a single chromosome
-        param: obj1 and obj2 - Customers or Depots
-        """
-
-        return np.linalg.norm(np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))

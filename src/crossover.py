@@ -142,7 +142,6 @@ class Crossover:
             end_i = start_i + n_customers
 
             # Select two points i and j with uniform distribution
-            # if n_customers >= 2:
             if n_customers > 1:
                 i, j = np.random.choice(range(n_customers), size=2, replace=False)
                 i, j = min(i, j), max(i, j)
@@ -152,6 +151,7 @@ class Crossover:
             # Include value in start_i + i
             inserting_values = []
             inserting_values.extend(parent1[start_i: start_i + i + 1])
+            # Skip right part of point (customers after j) if only 1 customer exists
             if i != 0:
                 inserting_values.extend(parent1[start_i+j: end_i])
 
@@ -201,17 +201,6 @@ class Crossover:
             # Assign the count to the corresponding depot index in the child
             child[depot_i] = customer_count
 
-        # # Extract the segment related to customers
-        # customer_segment = child[ga.vrp_instance.n_depots:]
-        # # Remove duplicates. In some rare cases duplicates exist. TODO: fix duplicates
-        # unique_customer_segment = np.array(list(set(customer_segment)))
-        # # Find the non-zero indices in the customer segment
-        # non_zero_indices = unique_customer_segment != 0
-        # # Update the customer segment with only non-zero values
-        # unique_customer_segment = unique_customer_segment[non_zero_indices]
-        # # Update the child array with the modified customer segment
-        # child = np.concatenate((child[:ga.vrp_instance.n_depots], unique_customer_segment))
-
         # Extract the segment related to customers
         customer_segment = child[ga.vrp_instance.n_depots:]
         # Find the non-zero indices in the customer segment
@@ -237,14 +226,13 @@ class Crossover:
                 depot_n_customers = child[depot_i]
 
                 # Range +1 to also insert after last index
-                for customer_i in range(0, depot_n_customers + 1, 2):
+                for customer_i in range(depot_n_customers + 1):
 
                     # Enable only insert position after depot range if last depot
                     if customer_i == depot_n_customers and depot_i != ga.vrp_instance.n_depots - 1:
                         continue
 
                     temp_child = child.copy()
-
                     temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
                     temp_child[depot_i] += 1
                     ga.split.split(temp_child)

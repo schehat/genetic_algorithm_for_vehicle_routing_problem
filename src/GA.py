@@ -171,7 +171,6 @@ class GA:
 
             children = self.do_crossover(children)
             children = self.do_mutation(children)
-            # self.local_search_single(self, self.best_solution)
 
             # Replace old generation with new generation
             self.population["chromosome"] = children
@@ -242,7 +241,6 @@ class GA:
 
         i_depot = -1
         depot = None
-        # print(route_complete, pred_complete)
 
         # Will hold the index where the depot routes end to aggregate distance and overtime
         depot_value_index = []
