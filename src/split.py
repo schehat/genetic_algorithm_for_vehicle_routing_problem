@@ -31,7 +31,7 @@ class Split:
 
         # Parallel execution
         with ThreadPoolExecutor() as executor:
-            results = [executor.submit(self._split_single_depot, chromosome, depot_i, customer_index_list[x]) for
+            results = [executor.submit(self.split_single_depot, chromosome, depot_i, customer_index_list[x]) for
                        x, depot_i in enumerate(range(self.ga.vrp_instance.n_depots))]
             for future in results:
                 p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = future.result()
@@ -52,7 +52,7 @@ class Split:
         self.ga.time_warp_complete = np.array(time_warp_complete)
         self.ga.duration_complete = np.array(duration_complete)
 
-    def _split_single_depot(self, chromosome, depot_i, customer_offset) -> Tuple[list, list, list, list, list, list, list]:
+    def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[list, list, list, list, list, list, list]:
         depot_i_n_customers = chromosome[depot_i]
         vehicle_i_depot: Depot = self.ga.vrp_instance.depots[depot_i]
 

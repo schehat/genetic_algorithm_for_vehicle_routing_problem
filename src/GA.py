@@ -1,6 +1,6 @@
 import os
-import random
 import time
+from random import random
 from typing import Callable
 
 import numpy as np
@@ -9,6 +9,7 @@ from numpy import ndarray
 from mutation import Mutation
 from enums import Purpose
 from src.distance_measurement import broken_pairs_distance
+from src.education import Education
 from src.split import Split
 from vrp import Customer, Depot, VRPInstance
 from crossover import Crossover
@@ -71,6 +72,7 @@ class GA:
 
         self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
         self.split = Split(self)
+        self.education = Education(self)
 
         population_type = np.dtype([
             ("individual", int),
@@ -107,10 +109,12 @@ class GA:
         self.duration_complete = np.array([], dtype=int)
 
         self.n_closest_neighbors = 5
-
         self.capacity_penalty_factor = 10
         self.duration_penalty_factor = 1
         self.time_window_penalty = 10
+        self.p_c = 1.0
+        self.p_m = 1.0
+        self.p_repair = 0.5
 
         self.crossover.adaptive_crossover_rate = self.k1
         self.mutation.adaptive_mutation_rate = self.k2
@@ -170,6 +174,15 @@ class GA:
                                 dtype=int)
 
             children = self.do_crossover(children)
+
+            # for i, chromosome in enumerate(self.population["chromosome"]):
+            #     self.education.run(chromosome)
+            #     # self.population[i]["fitness"] = self.total_fitness
+            #     # self.population[i]["distance"] = self.total_distance
+            #     # self.population[i]["time_warp"] = self.total_time_warp
+            #     # self.population[i]["duration_violation"] = self.total_duration_violation
+            #     pass
+
             children = self.do_mutation(children)
 
             # Replace old generation with new generation
@@ -428,7 +441,7 @@ class GA:
 
         for i in range(0, self.population_size):
             # self.mutation.uniform(children[i])
-            rand_num = random.random()
+            rand_num = random()
             if rand_num < 0.33:
                 self.mutation.swap(children[i])
             elif 0.33 <= rand_num < 0.66:

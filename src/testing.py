@@ -68,5 +68,6 @@ for i in range(100):
 
     # mutation.inversion(chromosome1)
 
-    crossover_new1 = crossover.periodic_crossover_with_insertions(chromosome1, chromosome2, ga)
+    ga.education.chromosome = chromosome1
+    crossover_new1 = ga.education.route_improvement()
     print(f"c1: {crossover_new1}")

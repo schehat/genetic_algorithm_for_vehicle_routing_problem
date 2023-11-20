@@ -1,4 +1,4 @@
-import random
+from random import random
 from math import floor, ceil
 
 import numpy as np
@@ -34,7 +34,7 @@ class Mutation:
 
         # Iterate through the vehicles and apply uniform mutation
         for i in range(self.vrp_instance.n_depots):
-            if random.random() <= self.MUTATION_RATE:
+            if random() <= self.MUTATION_RATE:
                 mutated_value = np.random.randint(min_customer, max_customer + 1)
                 chromosome[i] = mutated_value
 
@@ -68,7 +68,7 @@ class Mutation:
         """
 
         # Check if mutation should occur
-        if random.random() <= self.adaptive_mutation_rate:
+        if random() <= self.adaptive_mutation_rate:
             positions = self._generate_distinct_positions(2)
             pos1, pos2 = positions[0], positions[1]
 
@@ -81,7 +81,7 @@ class Mutation:
         param: chromosome - 1D array
         """
 
-        if random.random() <= self.adaptive_mutation_rate:
+        if random() <= self.adaptive_mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
@@ -94,7 +94,7 @@ class Mutation:
         param: chromosome - 1D array
         """
 
-        if random.random() <= self.adaptive_mutation_rate:
+        if random() <= self.adaptive_mutation_rate:
             pos1, pos2 = self._generate_distinct_positions(2)
             pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 

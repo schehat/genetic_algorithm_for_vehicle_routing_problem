@@ -1,4 +1,4 @@
-import random
+from random import random
 
 import numpy as np
 
@@ -27,14 +27,14 @@ class Crossover:
         """
 
         # Check if crossover should occur
-        if random.random() > self.adaptive_crossover_rate:
+        if random() > self.adaptive_crossover_rate:
             return parent1  # No crossover, return parent1 as is
 
         child = parent1.copy()
 
         # Iterate through the depots and apply uniform crossover
         for i in range(self.vrp_instance.n_depots):
-            if random.random() <= self.CROSSOVER_RATE:
+            if random() <= self.CROSSOVER_RATE:
                 child[i] = parent2[i]
 
         return child
@@ -46,7 +46,7 @@ class Crossover:
         return: child 1D - array
         """
 
-        if random.random() > self.adaptive_crossover_rate:
+        if random() > self.adaptive_crossover_rate:
             return parent1
 
         # Ensure two distinct random positions
@@ -78,7 +78,7 @@ class Crossover:
         return: child 1D - array
         """
 
-        if random.random() > self.adaptive_crossover_rate:
+        if random() > self.adaptive_crossover_rate:
             return parent1
 
         # Ensure two distinct random positions
@@ -111,7 +111,7 @@ class Crossover:
         return: child 1D - array
         """
 
-        if random.random() > self.adaptive_crossover_rate:
+        if random() > self.adaptive_crossover_rate:
             return parent1
 
         # Generate a pool of unique random integers
@@ -240,6 +240,9 @@ class Crossover:
                     zero_indices = np.where(ga.p_complete == 0)[0]
                     selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
                     ga.total_fitness = np.sum(selected_values)
+
+                    # TODO: remove from position better then copy complete temp_child?
+                    # temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
 
                     if ga.total_fitness < best_fitness:
                         best_fitness = ga.total_fitness
