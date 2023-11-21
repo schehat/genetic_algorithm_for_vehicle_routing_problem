@@ -241,9 +241,6 @@ class Crossover:
                     selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
                     ga.total_fitness = np.sum(selected_values)
 
-                    # TODO: remove from position better then copy complete temp_child?
-                    # temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
-
                     if ga.total_fitness < best_fitness:
                         best_fitness = ga.total_fitness
                         best_position = customer_offset + customer_i

@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
-from random import random
+from random import random, shuffle
+from typing import Tuple
 
 import numpy as np
 from numpy import ndarray
@@ -27,54 +28,65 @@ class Education:
             self.customer_index_list.append(customer_index)
 
         fitness_complete = 0
+        chromosome_complete = []
 
         # Parallel execution
         with ThreadPoolExecutor() as executor:
-            results = [executor.submit(self.route_improvement_single_depot, depot_i) for depot_i in range(self.ga.vrp_instance.n_depots)]
+            results = [executor.submit(self.route_improvement_single_depot, depot_i) for depot_i in
+                       range(self.ga.vrp_instance.n_depots)]
             for future in results:
-                fitness = future.result()
+                fitness, chromosome = future.result()
                 fitness_complete += fitness
+                chromosome_complete += chromosome
 
         self.ga.total_fitness = fitness
 
         # TODO: Normal split to log correctly?
 
-    def route_improvement_single_depot(self, depot_i) -> float:
+    def route_improvement_single_depot(self, depot_i) -> Tuple[float, list]:
         depot_i_n_customers = self.chromosome[depot_i]
-        customer_candidates = list(range(self.customer_index_list[depot_i], self.customer_index_list[depot_i] + depot_i_n_customers))
+        # Contains customer chromosome for one depot
+        single_depot_chromosome = list(
+            self.chromosome[self.customer_index_list[depot_i]: self.customer_index_list[depot_i] + depot_i_n_customers])
+        # Add depot information at the beginning of chromosome for the split algorithm
+        single_depot_chromosome.insert(0, depot_i_n_customers)
 
-        # Shuffle customer indices to visit them in random order
-        random.shuffle(customer_candidates)
+        # Make a copy to keep the original list intact only with the customers
+        shuffle_single_depot_chromosome = single_depot_chromosome[1:]
+        # Shuffle to achieve random order which customer is selected
+        shuffle(shuffle_single_depot_chromosome)
 
         best_fitness = float('inf')
         best_insert_position = None
-        # Make a copy to keep the original list intact
-        temp_customer_candidates = customer_candidates.copy()
+        for customer in shuffle_single_depot_chromosome:
+            single_depot_chromosome.remove(customer)
+            # Depot information might be removed so need to insert it back
+            if single_depot_chromosome[0] != depot_i_n_customers:
+                single_depot_chromosome.insert(0, depot_i_n_customers)
 
-        for customer_index in customer_candidates:
-            temp_customer_candidates.remove(customer_index)
-
-            for insert_position in range(len(temp_customer_candidates) + 1):
+            # Starting from 1 to exclude depot and until len + 1 to add as last element
+            for insert_position in range(1, len(single_depot_chromosome) + 1):
                 # Insert the customer at the specified position
-                temp_customer_candidates.insert(insert_position, customer_index)
+                single_depot_chromosome.insert(insert_position, customer)
 
-                # Call split to calculate fitness
-                self.split_single_depot(self.chromosome, depot_i, temp_customer_candidates)
+                # Call split to calculate fitness and only get the total fitness return value.
+                # Last argument customer_offset always 1
+                fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
 
-                # Update best fitness and position if needed
-                if self.ga.total_fitness < best_fitness:
-                    best_fitness = self.ga.total_fitness
+                # Update the best fitness and position if needed
+                if fitness < best_fitness:
+                    best_fitness = fitness
                     best_insert_position = insert_position
 
                 # Remove the customer for the next iteration
-                temp_customer_candidates.remove(customer_index)
+                single_depot_chromosome.remove(customer)
+                # Depot information might be removed so need to insert it back
+                if single_depot_chromosome[0] != depot_i_n_customers:
+                    single_depot_chromosome.insert(0, depot_i_n_customers)
 
-        # Final insertion at the best position
-        temp_customer_candidates.insert(best_insert_position, customer_index)
+            single_depot_chromosome.insert(best_insert_position, customer)
 
-        return best_fitness
-
-
+        return best_fitness, single_depot_chromosome
 
     def pattern_improvement(self):
         pass
