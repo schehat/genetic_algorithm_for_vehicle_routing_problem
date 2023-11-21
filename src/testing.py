@@ -68,6 +68,6 @@ for i in range(1):
 
     # mutation.inversion(chromosome1)
 
-    ga.education.chromosome = chromosome1
-    crossover_new1 = ga.education.route_improvement()
-    print(f"c1: {crossover_new1}")
+    # ga.education.chromosome = chromosome1
+    print(f"c1: {chromosome1}")
+    print(f"c1: {ga.education.run(chromosome1)}")

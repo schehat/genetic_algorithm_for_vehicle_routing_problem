@@ -13,11 +13,13 @@ class Education:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
-    def run(self, chromosome: ndarray) -> None:
+    def run(self, chromosome: ndarray) -> ndarray:
         self.chromosome = chromosome
         self.route_improvement()
         self.pattern_improvement()
         self.route_improvement()
+
+        return self.chromosome
 
     def route_improvement(self) -> None:
         # Determine indices for chromosome "splitting"
@@ -89,4 +91,24 @@ class Education:
         return depot_i, single_depot_chromosome[1:], best_fitness
 
     def pattern_improvement(self):
+        self.n1_swap_and_relocate()
+        self.n2_2opt_asterisk()
+        self.n3_2opt()
+
+    def n1_swap_and_relocate(self):
+        # Select two depots randomly
+        depot1, depot2 = np.random.choice(self.ga.vrp_instance.n_depots, size=2, replace=False)
+
+        # Select visit sequence length to swap
+        seq_length_depot1 = np.random.randint(0, 3)
+        seq_length_depot2 = np.random.randint(0, 3)
+
+
+
+
+
+    def n2_2opt_asterisk(self):
+        pass
+
+    def n3_2opt(self):
         pass
