@@ -61,7 +61,7 @@ ga = GA(VRP_INSTANCE,
         tournament_size=tournament_size,
         elitism_percentage=elitism_percentage)
 
-for i in range(100):
+for i in range(1):
     random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
     chromosome1 = np.concatenate((np.array([9, 7, 13, 11]), random_permutation))
     chromosome2 = np.concatenate((np.array([12, 9, 11, 8]), random_permutation))
