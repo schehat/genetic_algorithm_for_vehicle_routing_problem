@@ -1,3 +1,4 @@
+import math
 import os
 
 import numpy as np
@@ -13,13 +14,12 @@ class Plot:
     colors = ["salmon", "gold", "lightgreen", "mediumslateblue", "indianred", "orange", "limegreen", "deepskyblue",
               "yellow", "turquoise", "dodgerblue", "violet", "peru", "springgreen", "steelblue", "crimson"]
     color_i = -1
+    interval = None
 
     def __init__(self, ga: "GA", width=8, height=6):
         self.ga = ga
         self.width = width
         self.height = height
-        # Avoid interval of 0
-        self.interval = int(ga.max_generations * 0.05) if int(ga.max_generations * 0.05) > 0 else 50
 
     def plot_fitness(self):
         """
@@ -33,8 +33,19 @@ class Plot:
         avg_fitness = self.ga.fitness_stats["avg"]
 
         # Plot data points at interval
-        plt.plot(x[::self.interval], min_fitness[::self.interval], marker='o', label='Min Fitness')
-        plt.plot(x[::self.interval], avg_fitness[::self.interval], marker='o', label='Avg Fitness')
+        self.interval = math.ceil(self.ga.generation * 0.05) if math.ceil(self.ga.generation * 0.05) > 0 else 1
+        x_intervals = x[0:self.ga.generation+1:self.interval]
+        min_fitness_intervals = min_fitness[0:self.ga.generation+1:self.interval]
+        avg_fitness_intervals = avg_fitness[0:self.ga.generation+1:self.interval]
+
+        # Last element might not include self.ga.generation data points, if not add them
+        if x_intervals[-1] != self.ga.generation:
+            x_intervals = np.append(x_intervals, self.ga.generation)
+            min_fitness_intervals.append(min_fitness[-1])
+            avg_fitness_intervals.append(avg_fitness[-1])
+
+        plt.plot(x_intervals, min_fitness_intervals, marker='o', label='Min Fitness')
+        plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
 
         plt.xlabel('Generation')
         plt.ylabel('Fitness')

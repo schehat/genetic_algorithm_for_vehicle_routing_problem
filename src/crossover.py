@@ -16,7 +16,6 @@ class Crossover:
     def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
         self.vrp_instance: VRPInstance = vrp_instance
         self.CROSSOVER_RATE = crossover_rate
-        # helper attributes
         self.LENGTH_CHROMOSOME = self.vrp_instance.n_depots + vrp_instance.n_customers
 
     def uniform(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
@@ -250,8 +249,6 @@ class Crossover:
                             break
 
                 customer_offset += depot_n_customers
-                if n_improvements >= 2:
-                    break
 
             # Add m_customer at best_position final state
             child = np.insert(child, best_position, m_customer)

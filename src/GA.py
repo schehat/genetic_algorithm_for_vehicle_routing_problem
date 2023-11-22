@@ -32,6 +32,8 @@ class GA:
     generation = 0
     num_generation_no_improvement = 0
     NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = None
+    # In seconds
+    MAX_RUNNING_TIME = 1800
     start_time = None
     end_time = None
 
@@ -190,12 +192,15 @@ class GA:
 
             print(f"{self.generation}")
 
-            # Termination convergence criteria
+            # Track number of no improvements
             if self.fitness_stats["min"][self.generation] > self.best_solution["fitness"]:
                 self.num_generation_no_improvement += 1
             else:
                 self.num_generation_no_improvement = 0
-            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT:
+
+            # Termination convergence criteria of GA
+            self.end_time = time.time()
+            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT: #or self.end_time - self.start_time >= self.MAX_RUNNING_TIME:
                 break
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
@@ -204,6 +209,8 @@ class GA:
         # Need to decode again to log chromosome correctly after local search
         self.decode_chromosome(self.best_solution["chromosome"])
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        if self.fitness_stats[self.generation]["min"] >= self.best_solution["fitness"]:
+            self.fitness_stats[self.generation]["min"] = self.best_solution["fitness"]
         self.plotter.plot_fitness()
         self.plotter.plot_routes(self.best_solution["chromosome"])
         self.log_configuration(self.best_solution)
@@ -401,14 +408,14 @@ class GA:
 
             # Generate 2 children by swapping parents in argument of crossover operation
             children[individual] = self.crossover.periodic_crossover_with_insertions(
-                                        self.population[individual]["chromosome"],
-                                        self.population[individual + 1]["chromosome"],
-                                        self)
+                self.population[individual]["chromosome"],
+                self.population[individual + 1]["chromosome"],
+                self)
 
             children[individual + 1] = self.crossover.periodic_crossover_with_insertions(
-                                        self.population[individual + 1]["chromosome"],
-                                        self.population[individual]["chromosome"],
-                                        self)
+                self.population[individual + 1]["chromosome"],
+                self.population[individual]["chromosome"],
+                self)
 
         return children
 
@@ -466,7 +473,8 @@ class GA:
 
         with open(os.path.join(directory, 'best_chromosome.txt'), 'a') as file:
             file.write(f'Population size: {self.population_size}'
-                       f'\nGenerations: {self.max_generations}'
+                       f'\nMax generations: {self.max_generations}'
+                       f'\nExecuted generations: {self.generation}'                       
                        f'\nFitness scaling: {self.fitness_scaling.__name__}'
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nAdaptive tournament size: {self.tournament_size}'
@@ -475,6 +483,7 @@ class GA:
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
+                       f'\nFitness stats min: {self.fitness_stats["min"]} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '

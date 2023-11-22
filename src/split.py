@@ -81,7 +81,6 @@ class Split:
                 distance = 0
                 current_capacity = 0
 
-                duration = 0
                 distance_depot_start = 0
                 first_start_window = 0
 
@@ -155,14 +154,11 @@ class Split:
                         stable = False
                         break
 
-            # print(f"k: {k}")
             # we have the paths with <= k arcs
             p1 = p2.copy()
 
             # Loop until stable or fleet exhausted
             if stable or k == self.ga.vrp_instance.n_vehicles:
-                # print("break")
                 break
 
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
-
