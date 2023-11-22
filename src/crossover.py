@@ -1,4 +1,4 @@
-from random import random
+from random import random, shuffle
 
 import numpy as np
 
@@ -225,7 +225,9 @@ class Crossover:
                 depot_n_customers = child[depot_i]
 
                 # Range +1 to also insert after last index
-                for customer_i in range(depot_n_customers + 1):
+                shuffle_insertion = list(range(depot_n_customers + 1))
+                shuffle(shuffle_insertion)
+                for customer_i in shuffle_insertion:
 
                     # Enable only insert position after depot range if last depot
                     if customer_i == depot_n_customers and depot_i != ga.vrp_instance.n_depots - 1:

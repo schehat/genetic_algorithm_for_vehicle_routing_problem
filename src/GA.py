@@ -483,7 +483,7 @@ class GA:
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
-                       f'\nFitness stats min: {self.fitness_stats["min"]} '
+                       f'\nFitness stats min: {self.fitness_stats["min"][:self.generation+1]} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '

@@ -34,15 +34,15 @@ class Plot:
 
         # Plot data points at interval
         self.interval = math.ceil(self.ga.generation * 0.05) if math.ceil(self.ga.generation * 0.05) > 0 else 1
-        x_intervals = x[0:self.ga.generation+1:self.interval]
+        x_intervals = np.arange(self.ga.max_generations)[0:self.ga.generation+1:self.interval]
         min_fitness_intervals = min_fitness[0:self.ga.generation+1:self.interval]
         avg_fitness_intervals = avg_fitness[0:self.ga.generation+1:self.interval]
 
         # Last element might not include self.ga.generation data points, if not add them
         if x_intervals[-1] != self.ga.generation:
             x_intervals = np.append(x_intervals, self.ga.generation)
-            min_fitness_intervals.append(min_fitness[-1])
-            avg_fitness_intervals.append(avg_fitness[-1])
+            min_fitness_intervals = np.append(min_fitness_intervals, min_fitness[self.ga.generation])
+            avg_fitness_intervals = np.append(avg_fitness_intervals, avg_fitness[self.ga.generation])
 
         plt.plot(x_intervals, min_fitness_intervals, marker='o', label='Min Fitness')
         plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
