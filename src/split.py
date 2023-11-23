@@ -1,3 +1,4 @@
+import itertools
 from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple
 
@@ -12,7 +13,7 @@ class Split:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
-    def split(self, chromosome: ndarray) -> None:
+    def split(self, chromosome: ndarray) -> ndarray:
         # Determine indices for chromosome "splitting"
         customer_index = self.ga.vrp_instance.n_depots
         customer_index_list = [customer_index]
@@ -29,19 +30,29 @@ class Split:
         time_warp_complete = []
         duration_complete = []
 
-        # Parallel execution
-        with ThreadPoolExecutor() as executor:
-            results = [executor.submit(self.split_single_depot, chromosome, depot_i, customer_index_list[x]) for
-                       x, depot_i in enumerate(range(self.ga.vrp_instance.n_depots))]
-            for future in results:
-                p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = future.result()
-                p_complete += p
-                pred_complete += pred
-                distance_complete += distance_list
-                capacity_complete += capacity_list
-                time_complete += time_list
-                time_warp_complete += time_warp_list
-                duration_complete += duration_list
+        for x, depot_i in enumerate(range(self.ga.vrp_instance.n_depots)):
+            p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = self.split_single_depot(chromosome, depot_i, customer_index_list[x])
+            p_complete += p
+            pred_complete += pred
+            distance_complete += distance_list
+            capacity_complete += capacity_list
+            time_complete += time_list
+            time_warp_complete += time_warp_list
+            duration_complete += duration_list
+
+        # Parallel execution. IS SLOWER AT THE MOMENT MIGHT CHANGE WITH BIGGER BENCHMARKS
+        # with ThreadPoolExecutor() as executor:
+        #     results = [executor.submit(self.split_single_depot, chromosome, depot_i, customer_index_list[x]) for
+        #                x, depot_i in enumerate(range(self.ga.vrp_instance.n_depots))]
+        #     for future in results:
+        #         p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = future.result()
+        #         p_complete += p
+        #         pred_complete += pred
+        #         distance_complete += distance_list
+        #         capacity_complete += capacity_list
+        #         time_complete += time_list
+        #         time_warp_complete += time_warp_list
+        #         duration_complete += duration_list
 
         # Convert list to array for performance
         self.ga.p_complete = np.array(p_complete)
@@ -52,7 +63,10 @@ class Split:
         self.ga.time_warp_complete = np.array(time_warp_complete)
         self.ga.duration_complete = np.array(duration_complete)
 
-    def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[list, list, list, list, list, list, list]:
+        return np.array(p_complete)
+
+    def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[
+        list, list, list, list, list, list, list]:
         depot_i_n_customers = chromosome[depot_i]
         vehicle_i_depot: Depot = self.ga.vrp_instance.depots[depot_i]
 
@@ -125,8 +139,10 @@ class Split:
                     distance_to_depot = euclidean_distance(customer_i, vehicle_i_depot)
                     duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                     cost = distance \
-                           + self.ga.duration_penalty_factor * max(0, duration - self.ga.vrp_instance.max_duration_of_a_route) \
-                           + self.ga.capacity_penalty_factor * max(0, current_capacity - self.ga.vrp_instance.max_capacity) \
+                           + self.ga.duration_penalty_factor * max(0,
+                                                                   duration - self.ga.vrp_instance.max_duration_of_a_route) \
+                           + self.ga.capacity_penalty_factor * max(0,
+                                                                   current_capacity - self.ga.vrp_instance.max_capacity) \
                            + self.ga.time_window_penalty * sum_time_warp
                     # if new solution better than current then update labels
                     if p1[t] + cost + distance_to_depot < p2[i]:

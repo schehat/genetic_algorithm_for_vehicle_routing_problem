@@ -1,3 +1,5 @@
+import timeit
+
 import numpy as np
 
 from src.GA import GA
@@ -10,7 +12,7 @@ from src.mutation import Mutation
 from src.selection import n_tournaments
 from src.vrp import Customer, Depot, VRPInstance
 
-n_customers = 40
+n_customers = 48
 n_depots = 4
 customers = np.zeros((n_customers,), dtype=Customer)
 depots = np.zeros((n_depots,), dtype=Depot)
@@ -31,10 +33,11 @@ mutation.adaptive_mutation_rate = 1.0
 
 # Create vrp instance
 INSTANCE_FILE_PATH = "../benchmark/c-mdvrptw/pr01"
+# VRP_INSTANCE = VRPInstance(4, n_customers, n_depots, 200, customers, depots, 500)
 VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
 # Set GA parameters
-POPULATION_SIZE = 100
+POPULATION_SIZE = 40
 CROSSOVER_RATE = 0.5
 MUTATION_RATE = 0.5
 MAX_GENERATIONS = 1
@@ -61,13 +64,27 @@ ga = GA(VRP_INSTANCE,
         tournament_size=tournament_size,
         elitism_percentage=elitism_percentage)
 
-for i in range(1):
-    random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
-    chromosome1 = np.concatenate((np.array([9, 7, 13, 11]), random_permutation))
-    chromosome2 = np.concatenate((np.array([12, 9, 11, 8]), random_permutation))
+# for i in range(1):
+#     random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
+#     chromosome1 = np.concatenate((np.array([9, 7, 13, 11]), random_permutation))
+#     chromosome2 = np.concatenate((np.array([12, 9, 11, 8]), random_permutation))
+#
+#
+#     # mutation.inversion(chromosome1)
+#
+#     ga.education.chromosome = chromosome1
+#     print(f"c1: {chromosome1}")
+#     print(f"c1: {ga.education.run(chromosome1)}")
 
-    # mutation.inversion(chromosome1)
+random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
+chromosome1 = np.concatenate((np.array([10, 7, 13, 18]), random_permutation))
+chromosome2 = np.concatenate((np.array([12, 15, 13, 8]), random_permutation))
+ga.education.chromosome = chromosome1
 
-    # ga.education.chromosome = chromosome1
-    print(f"c1: {chromosome1}")
-    print(f"c1: {ga.education.run(chromosome1)}")
+
+def ga_run():
+    ga.education.route_improvement()
+
+
+execution_time = timeit.timeit(ga_run, number=10)
+print(f"Execution time: {execution_time} seconds")

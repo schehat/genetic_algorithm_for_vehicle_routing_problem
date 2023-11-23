@@ -112,7 +112,7 @@ class GA:
 
         self.n_closest_neighbors = 5
         self.capacity_penalty_factor = 10
-        self.duration_penalty_factor = 1
+        self.duration_penalty_factor = 2
         self.time_window_penalty = 10
         self.p_c = 1.0
         self.p_m = 1.0
@@ -230,8 +230,7 @@ class GA:
         #                                     30,
         #                                     2, 47, 24, 12, 38, 40, 21, 43
         #                                     ]
-        # self.population[0]["chromosome"] = [12, 17,  9, 10, 45,  6, 34,  3, 27, 11, 21, 17, 42, 47,  2, 48, 10, 35, 41,  4, 36, 25, 26, 14, 33, 13, 20,  8, 29,  5, 28, 19, 32, 22, 37, 23,  9,  7, 24, 31, 44, 15, 18,  1, 16, 43, 39, 46, 30, 12, 38, 40]
-        # self.local_search_complete(self, self.population[0])
+        # # self.local_search_complete(self, self.population[0])
         # self.decode_chromosome(self.population[0]["chromosome"])
         # self.population[0]["fitness"] = self.total_fitness
         # self.population[0]["distance"] = self.total_distance
