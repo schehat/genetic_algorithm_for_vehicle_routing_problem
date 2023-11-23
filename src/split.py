@@ -13,7 +13,7 @@ class Split:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
-    def split(self, chromosome: ndarray) -> ndarray:
+    def split(self, chromosome: ndarray) -> None:
         # Determine indices for chromosome "splitting"
         customer_index = self.ga.vrp_instance.n_depots
         customer_index_list = [customer_index]
@@ -62,8 +62,6 @@ class Split:
         self.ga.time_complete = np.array(time_complete)
         self.ga.time_warp_complete = np.array(time_warp_complete)
         self.ga.duration_complete = np.array(duration_complete)
-
-        return np.array(p_complete)
 
     def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[
         list, list, list, list, list, list, list]:
