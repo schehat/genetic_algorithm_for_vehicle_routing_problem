@@ -5,7 +5,7 @@ import numpy as np
 from GA import GA
 from fitness_scaling import power_rank
 from selection import n_tournaments
-from local_search import two_opt_complete, two_opt_single
+from local_search import two_opt
 from initial_population import initial_population_grouping_savings_nnh, initial_population_random
 from vrp import Customer, Depot, VRPInstance
 
@@ -64,8 +64,7 @@ if __name__ == "__main__":
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
-    LOCAL_SEARCH_COMPLETE = two_opt_complete
-    LOCAL_SEARCH_SINGLE = two_opt_single
+    LOCAL_SEARCH_COMPLETE = two_opt
     tournament_size = 2
     elitism_percentage = 0.1
 
@@ -79,7 +78,6 @@ if __name__ == "__main__":
             FITNESS_SCALING,
             SELECTION_METHOD,
             LOCAL_SEARCH_COMPLETE,
-            LOCAL_SEARCH_SINGLE,
             tournament_size=tournament_size,
             elitism_percentage=elitism_percentage)
     ga.run()

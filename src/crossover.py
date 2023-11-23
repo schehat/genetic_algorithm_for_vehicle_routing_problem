@@ -133,7 +133,6 @@ class Crossover:
             # Copy customers from parent1 to child
             child[start_i:end_i] = parent1[start_i:end_i]
 
-        # TODO: try in ga call. just ignore errors, debugging too hard
         # Add visits from parent 1 for a_mix
         for depot_i in a_mix:
             n_customers = parent1[depot_i]

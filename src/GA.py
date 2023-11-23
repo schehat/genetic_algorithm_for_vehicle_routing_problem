@@ -46,7 +46,6 @@ class GA:
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_complete,
-                 local_search_single,
                  tournament_size: int = 5,
                  tournament_size_increment: int = 1,
                  elitism_percentage: float = 0.1,
@@ -65,7 +64,6 @@ class GA:
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, int], ndarray] = selection_method
         self.local_search_complete = local_search_complete
-        self.local_search_single = local_search_single
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
         self.elitism_percentage = elitism_percentage

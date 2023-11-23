@@ -6,7 +6,7 @@ from src.GA import GA
 from src.crossover import Crossover
 from src.fitness_scaling import power_rank
 from src.initial_population import initial_population_grouping_savings_nnh
-from src.local_search import two_opt_single, two_opt_complete
+from src.local_search import two_opt
 from src.main import read_cordeau_instance
 from src.mutation import Mutation
 from src.selection import n_tournaments
@@ -45,8 +45,7 @@ INITIAL_POPULATION = initial_population_grouping_savings_nnh
 # INITIAL_POPULATION = initial_population_random
 FITNESS_SCALING = power_rank
 SELECTION_METHOD = n_tournaments
-LOCAL_SEARCH_COMPLETE = two_opt_complete
-LOCAL_SEARCH_SINGLE = two_opt_single
+LOCAL_SEARCH_COMPLETE = two_opt
 tournament_size = 2
 elitism_percentage = 0.1
 
@@ -60,7 +59,6 @@ ga = GA(VRP_INSTANCE,
         FITNESS_SCALING,
         SELECTION_METHOD,
         LOCAL_SEARCH_COMPLETE,
-        LOCAL_SEARCH_SINGLE,
         tournament_size=tournament_size,
         elitism_percentage=elitism_percentage)
 
@@ -83,7 +81,7 @@ ga.education.chromosome = chromosome1
 
 
 def ga_run():
-    ga.education.route_improvement()
+    ga.education.run(chromosome1)
 
 
 execution_time = timeit.timeit(ga_run, number=10)
