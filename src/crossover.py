@@ -157,7 +157,7 @@ class Crossover:
             try:
                 child[start_i:start_i + len(inserting_values)] = inserting_values
             except:
-                print("Error")
+                print("CROSSOVER Error")
 
         # Add visits from parent 2
         a_mix.extend(a2)

@@ -1,10 +1,12 @@
 import math
 from concurrent.futures import ThreadPoolExecutor
-from random import random, shuffle, seed
+from random import random, shuffle
 from typing import Tuple
 
 import numpy as np
 from numpy import ndarray
+
+from src.utility import set_customer_index_list
 
 
 class Education:
@@ -17,26 +19,27 @@ class Education:
 
     def run(self, chromosome: ndarray) -> ndarray:
         self.chromosome = chromosome
-        customer_index = self.ga.vrp_instance.n_depots
-        self.customer_index_list = [customer_index]
-        for depot_i in range(self.ga.vrp_instance.n_depots - 1):
-            customer_index += self.chromosome[depot_i]
-            self.customer_index_list.append(customer_index)
+        # Determine indices for chromosome "splitting"
+        self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.chromosome)
 
-        # self.route_improvement()
+        # Determine indices for chromosome "splitting"
+        customer_index = self.ga.vrp_instance.n_depots
+        customer_index_list = [customer_index]
+        for depot_i in range(self.ga.vrp_instance.n_depots - 1):
+            customer_index += chromosome[depot_i]
+            customer_index_list.append(customer_index)
+
+        self.route_improvement()
         self.pattern_improvement()
+
+        # Depot assignment changed, need to update indices
+        self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.chromosome)
+
         # self.route_improvement()
 
         return self.chromosome
 
     def route_improvement(self) -> None:
-        # Determine indices for chromosome "splitting"
-        customer_index = self.ga.vrp_instance.n_depots
-        self.customer_index_list = [customer_index]
-        for depot_i in range(self.ga.vrp_instance.n_depots - 1):
-            customer_index += self.chromosome[depot_i]
-            self.customer_index_list.append(customer_index)
-
         fitness_complete = 0
         chromosome_complete = []
 
@@ -54,7 +57,7 @@ class Education:
         #         fitness_complete += fitness
         #         chromosome_complete.append((depot_i, single_chromosome))
 
-        chromosome_complete = sorted(chromosome_complete, key=lambda x: x[0])
+        # chromosome_complete = sorted(chromosome_complete, key=lambda x: x[0])
         full_chromosome = []
         # Append depot_info in one block and then flattened customer_info
         full_chromosome.extend(self.chromosome[:self.ga.vrp_instance.n_depots])
@@ -104,38 +107,25 @@ class Education:
         return depot_i, single_depot_chromosome[1:], best_fitness
 
     def pattern_improvement(self):
-        # best_candidate = None
-        # best_fitness = float('inf')
-        #
-        # # Run neighborhood search
-        # for _ in range(self.neighborhood_iterations):
-        #     chromosome_candidate = self.n1_swap_and_relocate()
-        #     self.ga.split.split(chromosome_candidate)
-        #     zero_indices = np.where(self.ga.p_complete == 0)[0]
-        #     selected_values = self.ga.p_complete[np.concatenate([zero_indices - 1])]
-        #     chromosome_candidate_fitness = np.sum(selected_values)
-        #
-        #     # Update the best candidate and best fitness if needed
-        #     if chromosome_candidate_fitness < best_fitness:
-        #         best_candidate = chromosome_candidate
-        #         best_fitness = chromosome_candidate_fitness
-        #
-        # # Set the best candidate as the new chromosome
-        # self.chromosome = best_candidate
-
-        chromosome_candidate = self.n2_2opt_asterisk()
-        # self.n3_2opt()
+        # Set the best candidate as the new self.chromosome
+        self.run_neighborhood_search(self.n1_swap_and_relocate)
+        self.run_neighborhood_search(self.n2_2opt_asterisk)
+        self.run_neighborhood_search(self.n3_2opt)
 
     def n1_swap_and_relocate(self) -> ndarray:
-        depot1, depot2 = self.pick_random_depots(True)
+        depot1, depot2 = self._pick_random_depots(False)
 
         # Select visit sequence length to swap
         seq_length_depot1 = np.random.randint(0, 3)
         seq_length_depot2 = np.random.randint(0, 3)
 
+        # Skip if no manipulation
+        if seq_length_depot1 + seq_length_depot2 == 0:
+            return self.chromosome
+
         # Determine the start and end indices for the chosen depots
-        start_depot1, end_depot1 = self.determine_start_and_end_depot_position(depot1)
-        start_depot2, end_depot2 = self.determine_start_and_end_depot_position(depot2)
+        start_depot1, end_depot1 = self._determine_start_and_end_depot_position(depot1)
+        start_depot2, end_depot2 = self._determine_start_and_end_depot_position(depot2)
 
         # Ensure the selected sequence length is valid for the depots
         seq_length_depot1 = min(seq_length_depot1, end_depot1 - start_depot1 + 1)
@@ -145,24 +135,24 @@ class Education:
         start_pick_depot1 = start_depot1 + np.random.randint(0, end_depot1 - start_depot1 + 1 - seq_length_depot1 + 1)
         start_pick_depot2 = start_depot2 + np.random.randint(0, end_depot2 - start_depot2 + 1 - seq_length_depot2 + 1)
 
-        # Edge case if same depot picked and ranges overlap
-        if depot1 == depot2:
-            # Check if the ranges from depot1 and depot2 are overlapping
-            if start_pick_depot1 <= start_pick_depot2 < start_pick_depot1 + seq_length_depot1 \
-                    or start_pick_depot1 <= start_pick_depot2 + seq_length_depot2 < start_pick_depot1 + seq_length_depot1:
-                # Check if enough genes exist for both sequences
-                if end_depot1 - start_depot1 + 1 > seq_length_depot1 + seq_length_depot2:
-                    # Iterate until genes do not overlap
-                    while start_pick_depot1 <= start_pick_depot2 < start_pick_depot1 + seq_length_depot1 \
-                            or start_pick_depot1 <= start_pick_depot2 + seq_length_depot2 < start_pick_depot1 + seq_length_depot1:
-                        start_pick_depot1 = start_depot1 + np.random.randint(0,
-                                                                             end_depot1 - start_depot1 + 1 - seq_length_depot1 + 1)
-                        start_pick_depot2 = start_depot2 + np.random.randint(0,
-                                                                             end_depot2 - start_depot2 + 1 - seq_length_depot2 + 1)
-                else:
-                    # Assign static if len of both sequences = len of block, because random assigning unnecessary
-                    start_pick_depot1 = start_depot1
-                    start_pick_depot2 = start_pick_depot1 + seq_length_depot1
+        # Edge case if same depot picked and ranges overlap. TODO: fix
+        # if depot1 == depot2:
+        #     # Check if the ranges from depot1 and depot2 are overlapping
+        #     if start_pick_depot1 <= start_pick_depot2 < start_pick_depot1 + seq_length_depot1 \
+        #             or start_pick_depot1 <= start_pick_depot2 + seq_length_depot2 < start_pick_depot1 + seq_length_depot1:
+        #         # Check if enough genes exist for both sequences
+        #         if end_depot1 - start_depot1 + 1 > seq_length_depot1 + seq_length_depot2:
+        #             # Iterate until genes do not overlap
+        #             while start_pick_depot1 <= start_pick_depot2 < start_pick_depot1 + seq_length_depot1 \
+        #                     or start_pick_depot1 <= start_pick_depot2 + seq_length_depot2 < start_pick_depot1 + seq_length_depot1:
+        #                 start_pick_depot1 = start_depot1 + np.random.randint(0,
+        #                                                                      end_depot1 - start_depot1 + 1 - seq_length_depot1 + 1)
+        #                 start_pick_depot2 = start_depot2 + np.random.randint(0,
+        #                                                                      end_depot2 - start_depot2 + 1 - seq_length_depot2 + 1)
+        #         else:
+        #             # Assign static if len of both sequences = len of block, because random assigning unnecessary
+        #             start_pick_depot1 = start_depot1
+        #             start_pick_depot2 = start_pick_depot1 + seq_length_depot1
 
         # Extract the selected genes. No need for +1, last value already included
         swapping_genes1 = self.chromosome[start_pick_depot1: start_pick_depot1 + seq_length_depot1]
@@ -182,19 +172,23 @@ class Education:
             swapping_genes2,
             self.chromosome[start_pick_depot1 + seq_length_depot1: start_pick_depot2],
             swapping_genes1,
-            self.chromosome[start_pick_depot2 + seq_length_depot2:]
+            self.chromosome[start_pick_depot2 + seq_length_depot2:self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers]
         ])
 
     def n2_2opt_asterisk(self):
-        depot1, depot2 = self.pick_random_depots(False)
+        depot1, depot2 = self._pick_random_depots(False)
 
         # Select visit sequence length to swap
         seq_length_depot1 = np.random.randint(0, 3)
         seq_length_depot2 = np.random.randint(0, 3)
 
+        # Skip if no manipulation
+        if seq_length_depot1 + seq_length_depot2 == 0:
+            return self.chromosome
+
         # Determine the start and end indices for the chosen depots
-        start_depot1, end_depot1 = self.determine_start_and_end_depot_position(depot1)
-        start_depot2, end_depot2 = self.determine_start_and_end_depot_position(depot2)
+        start_depot1, end_depot1 = self._determine_start_and_end_depot_position(depot1)
+        start_depot2, end_depot2 = self._determine_start_and_end_depot_position(depot2)
 
         # Ensure the selected sequence length is valid for the depots
         seq_length_depot1 = min(seq_length_depot1, end_depot1 - start_depot1 + 1)
@@ -227,15 +221,54 @@ class Education:
             self.chromosome[start_pick_depot2 + seq_length_depot2:]
         ])
 
-    def n3_2opt(self):
-        pass
+    def n3_2opt(self) -> ndarray:
+        # Select a sequence length to inverse
+        seq_length = np.random.randint(1, 4)
 
-    def pick_random_depots(self, replace: bool) -> Tuple[int, int]:
+        # Skip if no manipulation
+        if seq_length == 1:
+            return self.chromosome
+
+        # Determine the start and end indices for the chosen sequence
+        start_index = np.random.randint(self.customer_index_list[0], len(self.chromosome) - seq_length)
+
+        # Extract the selected sequence
+        selected_sequence = self.chromosome[start_index:start_index+seq_length]
+
+        # Reverse the sequence
+        reversed_sequence = selected_sequence[::-1]
+
+        # Swap the reversed sequence in the chromosome
+        new_chromosome = np.copy(self.chromosome)
+        new_chromosome[start_index:start_index+seq_length] = reversed_sequence
+
+        return new_chromosome
+
+    def run_neighborhood_search(self, neighborhood_search):
+        best_candidate = None
+        best_fitness = float('inf')
+
+        # Run neighborhood search
+        for _ in range(self.neighborhood_iterations):
+            chromosome_candidate = neighborhood_search()
+            self.ga.split.split(chromosome_candidate)
+            zero_indices = np.where(self.ga.p_complete == 0)[0]
+            selected_values = self.ga.p_complete[np.concatenate([zero_indices - 1])]
+            chromosome_candidate_fitness = np.sum(selected_values)
+
+            # Update the best candidate and best fitness if needed
+            if chromosome_candidate_fitness < best_fitness:
+                best_candidate = chromosome_candidate
+                best_fitness = chromosome_candidate_fitness
+
+        self.chromosome = best_candidate
+
+    def _pick_random_depots(self, replace: bool) -> Tuple[int, int]:
         # Select two depots randomly and ensure depot_1 < depot_2
         depot1, depot2 = np.random.choice(self.ga.vrp_instance.n_depots, size=2, replace=replace)
         return min(depot1, depot2), max(depot1, depot2)
 
-    def determine_start_and_end_depot_position(self, depot_i: int) -> Tuple[int, int]:
+    def _determine_start_and_end_depot_position(self, depot_i: int) -> Tuple[int, int]:
         start_depot = self.customer_index_list[depot_i]
         if depot_i == self.ga.vrp_instance.n_depots - 1:
             end_depot = len(self.chromosome) - 1

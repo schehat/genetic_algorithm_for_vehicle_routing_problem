@@ -6,6 +6,7 @@ import numpy as np
 from numpy import ndarray
 
 from src.distance_measurement import euclidean_distance
+from src.utility import set_customer_index_list
 from src.vrp import Depot, Customer
 
 
@@ -14,12 +15,10 @@ class Split:
         self.ga = ga
 
     def split(self, chromosome: ndarray) -> None:
+        if chromosome.ndim != 1:
+            print(1)
         # Determine indices for chromosome "splitting"
-        customer_index = self.ga.vrp_instance.n_depots
-        customer_index_list = [customer_index]
-        for depot_i in range(self.ga.vrp_instance.n_depots - 1):
-            customer_index += chromosome[depot_i]
-            customer_index_list.append(customer_index)
+        customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
 
         # Initial list gets appended with lists of single depot split
         p_complete = []
@@ -101,7 +100,11 @@ class Split:
 
                 i = t + 1
 
-                customer_value_i = chromosome[customer_offset + (i - 1)]
+                try:
+                    customer_value_i = chromosome[customer_offset + (i - 1)]
+                except:
+                    print("SPLIT ERROR")
+                    break
                 customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
 
                 # 2 * Capacity to allow infeasible solution for better space search

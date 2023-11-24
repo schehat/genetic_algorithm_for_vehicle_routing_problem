@@ -175,15 +175,15 @@ class GA:
 
             children = self.do_crossover(children)
 
-            # for i, chromosome in enumerate(self.population["chromosome"]):
-            #     self.education.run(chromosome)
-            #     # self.population[i]["fitness"] = self.total_fitness
-            #     # self.population[i]["distance"] = self.total_distance
-            #     # self.population[i]["time_warp"] = self.total_time_warp
-            #     # self.population[i]["duration_violation"] = self.total_duration_violation
-            #     pass
+            for i, chromosome in enumerate(self.population["chromosome"]):
+                self.population[i]["chromosome"] = self.education.run(chromosome)
+                self.decode_chromosome(self.population[i]["chromosome"])
+                self.population[i]["fitness"] = self.total_fitness
+                self.population[i]["distance"] = self.total_distance
+                self.population[i]["time_warp"] = self.total_time_warp
+                self.population[i]["duration_violation"] = self.total_duration_violation
 
-            children = self.do_mutation(children)
+            # children = self.do_mutation(children)
 
             # Replace old generation with new generation
             self.population["chromosome"] = children
@@ -198,7 +198,7 @@ class GA:
 
             # Termination convergence criteria of GA
             self.end_time = time.time()
-            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT: #or self.end_time - self.start_time >= self.MAX_RUNNING_TIME:
+            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME:
                 break
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
