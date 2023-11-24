@@ -18,7 +18,7 @@ class Education:
 
     def __init__(self, ga: "GA", max_visit_sequence: int = 5):
         self.ga = ga
-        self.max_visit_sequence = 5
+        self.max_visit_sequence = max_visit_sequence
         self.neighborhood_iterations = math.floor(0.05 * (ga.vrp_instance.n_depots + ga.vrp_instance.n_customers))
 
     def run(self, chromosome: ndarray) -> ndarray:
@@ -146,8 +146,8 @@ class Education:
         Runs each neighbor method according to the neighbor exploration of 5% and picks the best solution
         """
 
-        best_candidate = None
-        best_fitness = float('inf')
+        best_candidate = self.chromosome
+        best_fitness = self.ga.total_fitness
 
         # Run neighborhood search
         for _ in range(self.neighborhood_iterations):
