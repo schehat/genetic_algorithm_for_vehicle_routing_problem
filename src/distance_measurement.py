@@ -2,7 +2,13 @@ import numpy as np
 from numpy.core.records import ndarray
 
 
-def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray):
+def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> int:
+    """
+    Counts number of paris in chromosome_a separated in chromosome_b as diversity distance measurement (Prins 2009)
+    param: chromosome_a, chromosome b
+    return: number of broken pairs
+    """
+
     # Create a mapping of customers to their indices in chromosome_b
     index_mapping = {customer: i for i, customer in enumerate(chromosome_b)}
     broken_pairs_count = 0
@@ -21,7 +27,13 @@ def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray):
     return broken_pairs_count
 
 
-def hamming_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> float:
+def hamming_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> int:
+    """
+    Calculates hamming distance between 2 chromosomes as the number of not alike genes
+    param: chromosome_a, chromosome b
+    return: number of not alike genes
+    """
+
     hamming_distance = 0
     for i in range(len(chromosome_a)):
         customer_a_i = chromosome_a[i]
@@ -38,6 +50,7 @@ def euclidean_distance(obj1, obj2) -> float:
     """
     Calculate fitness for a single chromosome
     param: obj1 and obj2 - Customers or Depots
+    return: distance
     """
 
     return np.linalg.norm(np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))

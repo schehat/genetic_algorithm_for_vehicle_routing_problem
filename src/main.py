@@ -56,28 +56,22 @@ if __name__ == "__main__":
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
-    POPULATION_SIZE = 50
+    POPULATION_SIZE = 20
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
     MAX_GENERATIONS = 50
-    INITIAL_POPULATION = initial_population_grouping_savings_nnh
-    # INITIAL_POPULATION = initial_population_random
+    # INITIAL_POPULATION = initial_population_grouping_savings_nnh
+    INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH_COMPLETE = two_opt
-    tournament_size = 2
-    elitism_percentage = 0.1
 
     # Configure GA and run
     ga = GA(VRP_INSTANCE,
             POPULATION_SIZE,
-            CROSSOVER_RATE,
-            MUTATION_RATE,
             MAX_GENERATIONS,
             INITIAL_POPULATION,
             FITNESS_SCALING,
             SELECTION_METHOD,
-            LOCAL_SEARCH_COMPLETE,
-            tournament_size=tournament_size,
-            elitism_percentage=elitism_percentage)
+            LOCAL_SEARCH_COMPLETE)
     ga.run()

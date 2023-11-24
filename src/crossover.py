@@ -10,12 +10,10 @@ class Crossover:
     Genetic operator to recombine genetic information of parents to produce a child
     """
 
-    # Will be set from the GA
-    adaptive_crossover_rate: float = None
+    UNIFORM_RATE = 0.5
 
-    def __init__(self, vrp_instance: VRPInstance, crossover_rate: float):
+    def __init__(self, vrp_instance: VRPInstance):
         self.vrp_instance: VRPInstance = vrp_instance
-        self.CROSSOVER_RATE = crossover_rate
         self.LENGTH_CHROMOSOME = self.vrp_instance.n_depots + vrp_instance.n_customers
 
     def uniform(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
@@ -25,15 +23,11 @@ class Crossover:
         return: child - 1D array
         """
 
-        # Check if crossover should occur
-        if random() > self.adaptive_crossover_rate:
-            return parent1  # No crossover, return parent1 as is
-
         child = parent1.copy()
 
         # Iterate through the depots and apply uniform crossover
         for i in range(self.vrp_instance.n_depots):
-            if random() <= self.CROSSOVER_RATE:
+            if random() <= self.UNIFORM_RATE:
                 child[i] = parent2[i]
 
         return child
@@ -44,9 +38,6 @@ class Crossover:
         param: parent 1 and parent 2 - 1D array
         return: child 1D - array
         """
-
-        if random() > self.adaptive_crossover_rate:
-            return parent1
 
         # Ensure two distinct random positions
         pos1, pos2 = np.random.choice(range(self.vrp_instance.n_depots, self.LENGTH_CHROMOSOME), size=2, replace=False)
@@ -72,13 +63,10 @@ class Crossover:
 
     def order_crossover_circular_prins(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """
-        Applying circular order crossover to the chromosome (prins 2004)
+        Applying circular order crossover to the chromosome (Prins 2004)
         param: parent 1 and parent 2 - 1D array
         return: child 1D - array
         """
-
-        if random() > self.adaptive_crossover_rate:
-            return parent1
 
         # Ensure two distinct random positions
         pos1, pos2 = np.random.choice(range(self.vrp_instance.n_depots, self.LENGTH_CHROMOSOME), size=2, replace=False)
@@ -105,13 +93,10 @@ class Crossover:
 
     def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA") -> np.ndarray:
         """
-        TODO
+        Advanced crossover inspired by (Vidal 2012)
         param: parent 1 and parent 2 - 1D array
         return: child 1D - array
         """
-
-        if random() > self.adaptive_crossover_rate:
-            return parent1
 
         # Generate a pool of unique random integers
         pool = list(range(self.vrp_instance.n_depots))
@@ -151,13 +136,10 @@ class Crossover:
             inserting_values.extend(parent1[start_i: start_i + i + 1])
             # Skip right part of point (customers after j) if only 1 customer exists
             if i != 0:
-                inserting_values.extend(parent1[start_i+j: end_i])
+                inserting_values.extend(parent1[start_i + j: end_i])
 
             # Copy selected range from parent1 to child
-            try:
-                child[start_i:start_i + len(inserting_values)] = inserting_values
-            except:
-                print("CROSSOVER Error")
+            child[start_i:start_i + len(inserting_values)] = inserting_values
 
         # Add visits from parent 2
         a_mix.extend(a2)

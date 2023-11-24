@@ -12,12 +12,10 @@ class Mutation:
     and local search technique to find better results
     """
 
-    # Will be set from the GA
-    adaptive_mutation_rate = None
+    P_UNIFORM = 0.5
 
-    def __init__(self, vrp_instance: VRPInstance, mutation_rate: float, minimum_serving_customers_per_vehicle=0.2):
+    def __init__(self, vrp_instance: VRPInstance, minimum_serving_customers_per_vehicle=0.2):
         self.vrp_instance: VRPInstance = vrp_instance
-        self.MUTATION_RATE = mutation_rate
         # Helper attributes
         self.END_SECOND_PART = self.vrp_instance.n_depots + vrp_instance.n_customers
         self.minimum_serving_customers_per_vehicle = minimum_serving_customers_per_vehicle
@@ -34,7 +32,7 @@ class Mutation:
 
         # Iterate through the vehicles and apply uniform mutation
         for i in range(self.vrp_instance.n_depots):
-            if random() <= self.MUTATION_RATE:
+            if random() <= self.P_UNIFORM:
                 mutated_value = np.random.randint(min_customer, max_customer + 1)
                 chromosome[i] = mutated_value
 
@@ -67,13 +65,11 @@ class Mutation:
         param: chromosome - 1D array
         """
 
-        # Check if mutation should occur
-        if random() <= self.adaptive_mutation_rate:
-            positions = self._generate_distinct_positions(2)
-            pos1, pos2 = positions[0], positions[1]
+        positions = self._generate_distinct_positions(2)
+        pos1, pos2 = positions[0], positions[1]
 
-            # Perform swap
-            chromosome[pos1], chromosome[pos2] = chromosome[pos2], chromosome[pos1]
+        # Perform swap
+        chromosome[pos1], chromosome[pos2] = chromosome[pos2], chromosome[pos1]
 
     def inversion(self, chromosome: np.ndarray):
         """
@@ -81,12 +77,11 @@ class Mutation:
         param: chromosome - 1D array
         """
 
-        if random() <= self.adaptive_mutation_rate:
-            pos1, pos2 = self._generate_distinct_positions(2)
-            pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
+        pos1, pos2 = self._generate_distinct_positions(2)
+        pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
-            # Perform inversion
-            chromosome[pos1:pos2 + 1] = chromosome[pos1:pos2 + 1][::-1]
+        # Perform inversion
+        chromosome[pos1:pos2 + 1] = chromosome[pos1:pos2 + 1][::-1]
 
     def insertion(self, chromosome: np.ndarray):
         """
@@ -94,18 +89,17 @@ class Mutation:
         param: chromosome - 1D array
         """
 
-        if random() <= self.adaptive_mutation_rate:
-            pos1, pos2 = self._generate_distinct_positions(2)
-            pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
+        pos1, pos2 = self._generate_distinct_positions(2)
+        pos1, pos2 = min(pos1, pos2), max(pos1, pos2)
 
-            # Get the customer to insert
-            gene_to_insert = chromosome[pos2]
+        # Get the customer to insert
+        gene_to_insert = chromosome[pos2]
 
-            # Remove the customer from its original position
-            removed_gene = np.delete(chromosome, pos2)
+        # Remove the customer from its original position
+        removed_gene = np.delete(chromosome, pos2)
 
-            # Insert the customer after pos1
-            chromosome[:] = np.insert(removed_gene, pos1 + 1, gene_to_insert)
+        # Insert the customer after pos1
+        chromosome[:] = np.insert(removed_gene, pos1 + 1, gene_to_insert)
 
     def _generate_distinct_positions(self, num_positions):
         """

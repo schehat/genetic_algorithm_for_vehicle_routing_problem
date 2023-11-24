@@ -18,11 +18,11 @@ def initial_population_random(ga: GA):
         # Part 1: Assign average number of customers for each depot
         depot_customer_count = np.zeros(ga.vrp_instance.n_depots, dtype=int)
         total_customers_assigned = 0
-        avg_customers_per_depot = ga.vrp_instance.n_customers / ga.vrp_instance.n_vehicles
+        avg_customers_per_depot = ga.vrp_instance.n_customers / ga.vrp_instance.n_depots
         std_deviation = 1.0
 
         # One additional loop to guarantee all customers are assigned to depot, relevant in else block
-        for depot_index in range(ga.vrp_instance.n_vehicles + 1):
+        for depot_index in range(ga.vrp_instance.n_depots + 1):
             # Calculate the maximum number of customers that can be assigned to depot
             max_customers = ga.vrp_instance.n_customers - total_customers_assigned
             if max_customers < 1:

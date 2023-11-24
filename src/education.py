@@ -1,5 +1,4 @@
 import math
-from concurrent.futures import ThreadPoolExecutor
 from random import random, shuffle
 from typing import Tuple
 
@@ -10,14 +9,25 @@ from src.utility import set_customer_index_list
 
 
 class Education:
+    """
+    Serves as a local search mechanism superior to random mutation
+    """
+
     chromosome = None
     customer_index_list = None
 
-    def __init__(self, ga: "GA"):
+    def __init__(self, ga: "GA", max_visit_sequence: int = 5):
         self.ga = ga
-        self.neighborhood_iterations = math.ceil(0.05 * (ga.vrp_instance.n_depots + ga.vrp_instance.n_customers))
+        self.max_visit_sequence = 5
+        self.neighborhood_iterations = math.floor(0.05 * (ga.vrp_instance.n_depots + ga.vrp_instance.n_customers))
 
     def run(self, chromosome: ndarray) -> ndarray:
+        """
+        Runtime logic
+        param: chromosome - being applied education
+        return: educated chromosome
+        """
+
         self.chromosome = chromosome
         # Determine indices for chromosome "splitting"
         self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.chromosome)
@@ -32,14 +42,19 @@ class Education:
         self.route_improvement()
         self.pattern_improvement()
 
-        # Depot assignment changed, need to update indices
-        self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.chromosome)
+        # # Depot assignment changed, need to update indices
+        # self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.chromosome)
 
         # self.route_improvement()
 
         return self.chromosome
 
     def route_improvement(self) -> None:
+        """
+        Route improvement deals with the configuration of the customers with the route of a single depot.
+        Here is the management of the all the depots held for configuring the new chromosome
+        """
+
         fitness_complete = 0
         chromosome_complete = []
 
@@ -67,6 +82,12 @@ class Education:
         self.ga.total_fitness = fitness_complete
 
     def route_improvement_single_depot(self, depot_i) -> Tuple[int, list, float]:
+        """
+        Responsible for running route improvement for a single depot
+        param: depot_i - depot index to identify depot
+        return: depot_i, new single depot chromosome WITHOUT depot_information as first element, new fitness
+        """
+
         depot_i_n_customers = self.chromosome[depot_i]
         # Contains customer chromosome for one depot
         single_depot_chromosome = list(
@@ -107,17 +128,53 @@ class Education:
         return depot_i, single_depot_chromosome[1:], best_fitness
 
     def pattern_improvement(self):
-        # Set the best candidate as the new self.chromosome
-        self.run_neighborhood_search(self.n1_swap_and_relocate)
-        self.run_neighborhood_search(self.n2_2opt_asterisk)
-        self.run_neighborhood_search(self.n3_2opt)
+        """
+        Pattern Improvement deals with the configuration of all customers between different depots to
+        evaluate better depot assignment
+        """
+        # Define the three methods
+        methods = [self.n1_swap_and_relocate, self.n2_2opt_asterisk, self.n3_2opt]
+        # Shuffle the list of methods randomly
+        shuffle(methods)
+        # Execute the methods in the shuffled order
+        for method in methods:
+            # Sets the best candidate as the new self.chromosome
+            self.run_neighborhood_search(method)
+
+    def run_neighborhood_search(self, neighborhood_search):
+        """
+        Runs each neighbor method according to the neighbor exploration of 5% and picks the best solution
+        """
+
+        best_candidate = None
+        best_fitness = float('inf')
+
+        # Run neighborhood search
+        for _ in range(self.neighborhood_iterations):
+            chromosome_candidate = neighborhood_search()
+            self.ga.split.split(chromosome_candidate)
+            zero_indices = np.where(self.ga.p_complete == 0)[0]
+            selected_values = self.ga.p_complete[np.concatenate([zero_indices - 1])]
+            chromosome_candidate_fitness = np.sum(selected_values)
+
+            # Update the best candidate and best fitness if needed
+            if chromosome_candidate_fitness < best_fitness:
+                best_candidate = chromosome_candidate
+                best_fitness = chromosome_candidate_fitness
+
+        self.chromosome = best_candidate
 
     def n1_swap_and_relocate(self) -> ndarray:
+        """
+        Swaps and inverses if necessary genes between the same or different depots
+        return: new chromosome
+        """
+
         depot1, depot2 = self._pick_random_depots(False)
 
         # Select visit sequence length to swap
-        seq_length_depot1 = np.random.randint(0, 3)
-        seq_length_depot2 = np.random.randint(0, 3)
+        seq_length_depot1 = np.random.randint(0, self.max_visit_sequence + 1)
+        seq_length_depot2 = np.random.randint(0, self.max_visit_sequence + 1)
 
         # Skip if no manipulation
         if seq_length_depot1 + seq_length_depot2 == 0:
@@ -175,12 +232,17 @@ class Education:
             self.chromosome[start_pick_depot2 + seq_length_depot2:self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers]
         ])
 
-    def n2_2opt_asterisk(self):
+    def n2_2opt_asterisk(self) -> ndarray:
+        """
+        Swaps customers at the extremities of distinct routes
+        return: new chromosome
+        """
+
         depot1, depot2 = self._pick_random_depots(False)
 
         # Select visit sequence length to swap
-        seq_length_depot1 = np.random.randint(0, 3)
-        seq_length_depot2 = np.random.randint(0, 3)
+        seq_length_depot1 = np.random.randint(0, self.max_visit_sequence + 1)
+        seq_length_depot2 = np.random.randint(0, self.max_visit_sequence + 1)
 
         # Skip if no manipulation
         if seq_length_depot1 + seq_length_depot2 == 0:
@@ -222,8 +284,13 @@ class Education:
         ])
 
     def n3_2opt(self) -> ndarray:
+        """
+        Inverse customer sequence, between different depots possible
+        return: new chromosome
+        """
+
         # Select a sequence length to inverse
-        seq_length = np.random.randint(1, 4)
+        seq_length = np.random.randint(1, self.max_visit_sequence + 1)
 
         # Skip if no manipulation
         if seq_length == 1:
@@ -243,25 +310,6 @@ class Education:
         new_chromosome[start_index:start_index+seq_length] = reversed_sequence
 
         return new_chromosome
-
-    def run_neighborhood_search(self, neighborhood_search):
-        best_candidate = None
-        best_fitness = float('inf')
-
-        # Run neighborhood search
-        for _ in range(self.neighborhood_iterations):
-            chromosome_candidate = neighborhood_search()
-            self.ga.split.split(chromosome_candidate)
-            zero_indices = np.where(self.ga.p_complete == 0)[0]
-            selected_values = self.ga.p_complete[np.concatenate([zero_indices - 1])]
-            chromosome_candidate_fitness = np.sum(selected_values)
-
-            # Update the best candidate and best fitness if needed
-            if chromosome_candidate_fitness < best_fitness:
-                best_candidate = chromosome_candidate
-                best_fitness = chromosome_candidate_fitness
-
-        self.chromosome = best_candidate
 
     def _pick_random_depots(self, replace: bool) -> Tuple[int, int]:
         # Select two depots randomly and ensure depot_1 < depot_2

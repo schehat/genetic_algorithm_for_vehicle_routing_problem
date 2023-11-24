@@ -32,33 +32,27 @@ class GA:
     generation = 0
     num_generation_no_improvement = 0
     NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = None
-    # In seconds
-    MAX_RUNNING_TIME = 1800
+    MAX_RUNNING_TIME_IN_S = 1800
     start_time = None
     end_time = None
 
     def __init__(self, vrp_instance: VRPInstance,
                  population_size: int,
-                 crossover_rate: float,
-                 mutation_rate: float,
                  max_generations: int,
                  initial_population: Callable[[any], None],  # any => GA
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_complete,
-                 tournament_size: int = 5,
+                 tournament_size: int = 2,
                  tournament_size_increment: int = 1,
-                 elitism_percentage: float = 0.1,
-                 k1: float = 0.9,
-                 k2: float = 0.3):
-        """
-            param: k1 and k2 - control rates for adaptive genetic operators
-        """
+                 n_elite: float = 5,
+                 p_c: float = 0.9,
+                 p_m: float = 0.3):
 
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
-        self.crossover = Crossover(self.vrp_instance, crossover_rate)
-        self.mutation = Mutation(self.vrp_instance, mutation_rate)
+        self.crossover = Crossover(self.vrp_instance)
+        self.mutation = Mutation(self.vrp_instance)
         self.max_generations = max_generations
         self.initial_population = initial_population
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
@@ -66,9 +60,11 @@ class GA:
         self.local_search_complete = local_search_complete
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
-        self.elitism_percentage = elitism_percentage
-        self.k1 = k1
-        self.k2 = k2
+        self.n_elite = n_elite
+        self.p_c = p_c
+        self.p_m = p_m
+        self.p_education = 1.0
+        self.p_repair = 0.5
 
         self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
         self.split = Split(self)
@@ -112,12 +108,6 @@ class GA:
         self.capacity_penalty_factor = 10
         self.duration_penalty_factor = 2
         self.time_window_penalty = 10
-        self.p_c = 1.0
-        self.p_m = 1.0
-        self.p_repair = 0.5
-
-        self.crossover.adaptive_crossover_rate = self.k1
-        self.mutation.adaptive_mutation_rate = self.k2
 
         self.route_data = []
 
@@ -161,7 +151,7 @@ class GA:
 
             # Before starting the parent selection. Save percentage of best individuals
             top_individuals_i = np.argsort(self.population["fitness"])[
-                                :int(self.population_size * self.elitism_percentage)]
+                                :int(self.n_elite / self.population_size)]
             top_individuals = self.population[top_individuals_i]
 
             # Increasing selection pressure over time by increasing tournament size
@@ -188,17 +178,17 @@ class GA:
             # Replace old generation with new generation
             self.population["chromosome"] = children
 
-            print(f"{self.generation}")
+            print(f"Generation: {self.generation}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {time.time() - self.start_time}")
 
             # Track number of no improvements
-            if self.fitness_stats["min"][self.generation] > self.best_solution["fitness"]:
+            if self.fitness_stats[self.generation]["min"] > self.best_solution["fitness"]:
                 self.num_generation_no_improvement += 1
             else:
                 self.num_generation_no_improvement = 0
 
             # Termination convergence criteria of GA
             self.end_time = time.time()
-            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME:
+            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
@@ -239,10 +229,10 @@ class GA:
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> None:
         """
-        Decoding chromosome by traversing the genes considering constraints and fetching the routes.
-        Expecting a purpose to evaluate which operation should be used
+        Decoding chromosome by traversing the customers considering constraints and fetching the routes.
+        Optional purpose for collecting routes for plotting
         param: chromosome - 1D array
-        param: purpose - defines which operation should be used
+        param: purpose - optional flag to collect routes
         """
 
         self.total_fitness = 0.0
@@ -357,7 +347,7 @@ class GA:
                                                                                   len(diversity_contribution_indexes) + 1)
 
         # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
-        biased_fitness = fitness_ranked + (1 - self.elitism_percentage) * diversity_contribution_ranked
+        biased_fitness = fitness_ranked + (1 - self.n_elite / self.population_size) * diversity_contribution_ranked
 
         # Update the population array with the new values
         self.population["fitness_ranked"] = fitness_ranked
@@ -390,7 +380,7 @@ class GA:
         """
 
         worst_individuals_i = np.argsort(self.population["fitness"])[
-                              :int(self.population_size * self.elitism_percentage)]
+                              :int(self.n_elite / self.population_size)]
         self.population[worst_individuals_i] = top_individuals
 
     def do_crossover(self, children: ndarray) -> ndarray:
@@ -403,16 +393,20 @@ class GA:
         for individual in range(0, self.population_size, 2):
             # self.do_adaptive_crossover_and_mutation_rate(individual)
 
-            # Generate 2 children by swapping parents in argument of crossover operation
-            children[individual] = self.crossover.periodic_crossover_with_insertions(
-                self.population[individual]["chromosome"],
-                self.population[individual + 1]["chromosome"],
-                self)
+            if random() <= self.p_c:
+                # Generate 2 children by swapping parents in argument of crossover operation
+                children[individual] = self.crossover.periodic_crossover_with_insertions(
+                    self.population[individual]["chromosome"],
+                    self.population[individual + 1]["chromosome"],
+                    self)
 
-            children[individual + 1] = self.crossover.periodic_crossover_with_insertions(
-                self.population[individual + 1]["chromosome"],
-                self.population[individual]["chromosome"],
-                self)
+                children[individual + 1] = self.crossover.periodic_crossover_with_insertions(
+                    self.population[individual + 1]["chromosome"],
+                    self.population[individual]["chromosome"],
+                    self)
+            else:
+                children[individual] = self.population[individual]["chromosome"]
+                children[individual + 1] = self.population[individual + 1]["chromosome"]
 
         return children
 
@@ -427,14 +421,14 @@ class GA:
             denominator = max_parent_fitness - self.fitness_stats[self.generation]["min_scaled"]
 
             try:
-                self.crossover.adaptive_crossover_rate = self.k1 * (numerator / denominator)
-                self.mutation.adaptive_mutation_rate = self.k2 * (numerator / denominator)
+                self.crossover.adaptive_crossover_rate = self.p_c * (numerator / denominator)
+                self.mutation.adaptive_mutation_rate = self.p_m * (numerator / denominator)
             except ZeroDivisionError:
-                self.crossover.adaptive_crossover_rate = self.k1
-                self.mutation.adaptive_mutation_rate = self.k2
+                self.crossover.adaptive_crossover_rate = self.p_c
+                self.mutation.adaptive_mutation_rate = self.p_m
         else:
-            self.crossover.adaptive_crossover_rate = self.k1
-            self.mutation.adaptive_mutation_rate = self.k2
+            self.crossover.adaptive_crossover_rate = self.p_c
+            self.mutation.adaptive_mutation_rate = self.p_m
 
     def do_mutation(self, children) -> ndarray:
         """
@@ -445,13 +439,16 @@ class GA:
 
         for i in range(0, self.population_size):
             # self.mutation.uniform(children[i])
-            rand_num = random()
-            if rand_num < 0.33:
-                self.mutation.swap(children[i])
-            elif 0.33 <= rand_num < 0.66:
-                self.mutation.inversion(children[i])
-            else:
-                self.mutation.insertion(children[i])
+
+            if random() <= self.p_m:
+                rand_num = random()
+                if rand_num < 0.33:
+                    self.mutation.swap(children[i])
+                elif 0.33 <= rand_num < 0.66:
+                    self.mutation.inversion(children[i])
+                else:
+                    self.mutation.insertion(children[i])
+
         return children
 
     def log_configuration(self, individual) -> None:
@@ -475,7 +472,7 @@ class GA:
                        f'\nFitness scaling: {self.fitness_scaling.__name__}'
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nAdaptive tournament size: {self.tournament_size}'
-                       f'\nElitism: {self.elitism_percentage}'
+                       f'\nElitism: {self.n_elite}'
                        f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])}'
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'

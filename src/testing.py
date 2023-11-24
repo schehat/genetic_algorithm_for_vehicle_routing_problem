@@ -26,8 +26,8 @@ vrp_instance = VRPInstance(4, n_customers, n_depots, 80, customers, depots, 500)
 
 mutation_rate = 1.0
 crossover_rate = 1.0
-mutation = Mutation(vrp_instance, mutation_rate)
-crossover = Crossover(vrp_instance, crossover_rate)
+mutation = Mutation(vrp_instance)
+crossover = Crossover(vrp_instance)
 crossover.adaptive_crossover_rate = 1.0
 mutation.adaptive_mutation_rate = 1.0
 
@@ -52,15 +52,13 @@ elitism_percentage = 0.1
 # Configure GA and run
 ga = GA(VRP_INSTANCE,
         POPULATION_SIZE,
-        CROSSOVER_RATE,
-        MUTATION_RATE,
         MAX_GENERATIONS,
         INITIAL_POPULATION,
         FITNESS_SCALING,
         SELECTION_METHOD,
         LOCAL_SEARCH_COMPLETE,
         tournament_size=tournament_size,
-        elitism_percentage=elitism_percentage)
+        p_elitism=elitism_percentage)
 
 # for i in range(1):
 #     random_permutation = np.random.permutation(np.arange(1, n_customers + 1))
