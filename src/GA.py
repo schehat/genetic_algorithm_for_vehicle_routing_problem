@@ -1,7 +1,8 @@
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from random import random
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 from numpy import ndarray
@@ -32,7 +33,8 @@ class GA:
     generation = 0
     num_generation_no_improvement = 0
     NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = None
-    MAX_RUNNING_TIME_IN_S = 1800
+    NUM_GENERATIONS_DIVERSITY = 6
+    MAX_RUNNING_TIME_IN_S = 3600
     start_time = None
     end_time = None
 
@@ -43,11 +45,11 @@ class GA:
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_complete,
-                 tournament_size: int = 2,
+                 tournament_size: int = 1,
                  tournament_size_increment: int = 1,
                  n_elite: float = 5,
                  p_c: float = 0.9,
-                 p_m: float = 1.0):
+                 p_m: float = 0.25):
 
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
@@ -60,13 +62,14 @@ class GA:
         self.local_search_complete = local_search_complete
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
+        self.tournament_size_increment_step = 2
         self.n_elite = n_elite
         self.p_c = p_c
         self.p_m = p_m
-        self.p_education = 0.8
+        self.p_education = 0.25
         self.p_repair = 0.5
         self.min_population_size = 20
-        self.max_population_size = 20
+        self.max_population_size = self.min_population_size + 20
 
         self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
         self.split = Split(self)
@@ -92,21 +95,8 @@ class GA:
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
                                                                        ("max_scaled", float), ("avg_scaled", float),
                                                                        ("min_scaled", float)]))
-        # Total for one individual not the total of all individuals
-        self.total_fitness = 0.0
-        self.total_distance = 0.0
-        self.total_time_warp = 0.0
-        self.total_duration_violation = 0.0
 
-        self.p_complete = np.array([], dtype=int)
-        self.pred_complete = np.array([], dtype=int)
-        self.distance_complete = np.array([], dtype=int)
-        self.capacity_complete = np.array([], dtype=int)
-        self.time_complete = np.array([], dtype=int)
-        self.time_warp_complete = np.array([], dtype=int)
-        self.duration_complete = np.array([], dtype=int)
-
-        self.n_closest_neighbors = 5
+        self.n_closest_neighbors = 3
         self.capacity_penalty_factor = 10
         self.duration_penalty_factor = 2
         self.time_window_penalty = 10
@@ -126,11 +116,11 @@ class GA:
         for self.generation in range(self.max_generations):
             # Fitness evaluation
             for i, chromosome in enumerate(self.population["chromosome"]):
-                self.decode_chromosome(chromosome)
-                self.population[i]["fitness"] = self.total_fitness
-                self.population[i]["distance"] = self.total_distance
-                self.population[i]["time_warp"] = self.total_time_warp
-                self.population[i]["duration_violation"] = self.total_duration_violation
+                total_fitness, total_distance, total_time_warp, total_duration_violation = self.decode_chromosome(chromosome)
+                self.population[i]["fitness"] = total_fitness
+                self.population[i]["distance"] = total_distance
+                self.population[i]["time_warp"] = total_time_warp
+                self.population[i]["duration_violation"] = total_duration_violation
 
             # self.calculate_biased_fitness()
 
@@ -152,12 +142,12 @@ class GA:
             self.fitness_stats[self.generation]["min_scaled"] = np.min(self.population["fitness"])
 
             # Before starting the parent selection. Save percentage of best individuals
-            top_individuals_i = np.argsort(self.population["fitness"])[
+            top_individuals_i = np.argsort(self.population["biased_fitness"])[
                                 :int(self.n_elite / self.population_size)]
             top_individuals = self.population[top_individuals_i]
 
             # Increasing selection pressure over time by increasing tournament size
-            if self.generation % (self.max_generations * 0.1) == 0:
+            if self.generation % self.tournament_size_increment_step == 0:
                 self.tournament_size += self.tournament_size_increment
             self.selection_method(self.population, self.tournament_size)
             self.do_elitism(top_individuals)
@@ -165,17 +155,24 @@ class GA:
             children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
                                 dtype=int)
 
+            self.end_time = time.time()
+            minutes, seconds = divmod(self.end_time - self.start_time, 60)
+            print(f"before crossover time: {int(minutes)}:{int(seconds)}")
             children = self.do_crossover(children)
+            self.end_time = time.time()
+            minutes, seconds = divmod(self.end_time - self.start_time, 60)
+            print(f"after crossover time: {int(minutes)}:{int(seconds)}")
 
-            for i, chromosome in enumerate(self.population["chromosome"]):
-                if random() <= self.p_education:
-                    self.population[i]["chromosome"] = self.education.run(chromosome)
-                    # self.decode_chromosome(self.population[i]["chromosome"])
-                    # self.population[i]["fitness"] = self.total_fitness
-                    # self.population[i]["distance"] = self.total_distance
-                    # self.population[i]["time_warp"] = self.total_time_warp
-                    # self.population[i]["duration_violation"] = self.total_duration_violation
-                else:
+            self.end_time = time.time()
+            minutes, seconds = divmod(self.end_time - self.start_time, 60)
+            print(f"before education time: {int(minutes)}:{int(seconds)}")
+            for i, chromosome in enumerate(children):
+                # if random() <= self.p_education:
+                #     try:
+                #         children[i] = self.education.run(chromosome)
+                #     except:
+                #         print("Education Error")
+                if random() <= self.p_m:
                     rand_num = random()
                     if rand_num < 0.33:
                         self.mutation.swap(children[i])
@@ -183,14 +180,17 @@ class GA:
                         self.mutation.inversion(children[i])
                     else:
                         self.mutation.insertion(children[i])
-            # children = self.do_mutation(children)
+            self.end_time = time.time()
+            minutes, seconds = divmod(self.end_time - self.start_time, 60)
+            print(f"after education time: {int(minutes)}:{int(seconds)}")
 
             # Replace old generation with new generation
             self.population["chromosome"] = children
 
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
-            print(f"Generation: {self.generation + 1}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {int(minutes)}:{int(seconds)}")
+            print(
+                f"Generation: {self.generation + 1}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Track number of no improvements
             if self.fitness_stats[self.generation]["min"] > self.best_solution["fitness"]:
@@ -202,11 +202,13 @@ class GA:
             self.end_time = time.time()
             if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
+            if self.NUM_GENERATIONS_DIVERSITY <= self.num_generation_no_improvement:
+                pass
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
-        # Need to decode again to log chromosome correctly after local search
+        # Need to decode again to log chromosome correctly after local search. TODO
         self.decode_chromosome(self.best_solution["chromosome"])
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         if self.fitness_stats[self.generation]["min"] >= self.best_solution["fitness"]:
@@ -239,7 +241,7 @@ class GA:
         # print(self.population[0])
         # self.log_configuration(self.population[0])
 
-    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> None:
+    def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
         """
         Decoding chromosome by traversing the customers considering constraints and fetching the routes.
         Optional purpose for collecting routes for plotting
@@ -247,15 +249,11 @@ class GA:
         param: purpose - optional flag to collect routes
         """
 
-        self.total_fitness = 0.0
-        self.total_distance = 0.0
-        self.total_time_warp = 0.0
-        self.total_duration_violation = 0.0
-
         if purpose == Purpose.PLOTTING:
             self.route_data = []
 
-        self.split.split(chromosome)
+        p_complete, pred_complete, distance_complete, capacity_complete, time_complete, time_warp_complete, duration_complete = self.split.split(
+            chromosome)
         i_route = 0
 
         i_depot = -1
@@ -266,7 +264,7 @@ class GA:
 
         for i_customer in chromosome[self.vrp_instance.n_depots:]:
             # Check if iterated through all routes of a depot then update depot
-            if self.p_complete[i_route] == 0:
+            if p_complete[i_route] == 0:
                 if purpose == Purpose.PLOTTING:
                     # Exclude first iteration
                     if depot is not None:
@@ -281,9 +279,9 @@ class GA:
                 if purpose == Purpose.PLOTTING:
                     self.collect_routes(depot, i_depot)
 
-            pred = self.pred_complete[i_route]
+            pred = pred_complete[i_route]
             # Then single route complete back to depot
-            if pred != self.pred_complete[i_route - 1]:
+            if pred != pred_complete[i_route - 1]:
                 self.collect_routes(depot, i_depot)
                 depot_value_index.append(i_route - 1)
 
@@ -300,20 +298,22 @@ class GA:
 
         depot_value_index = np.array(depot_value_index)
         # Select the values at depot_value_index
-        selected_values = self.distance_complete[np.concatenate([depot_value_index])]
-        self.total_distance = np.sum(selected_values)
+        selected_values = distance_complete[np.concatenate([depot_value_index])]
+        total_distance = np.sum(selected_values)
 
-        selected_values = self.time_warp_complete[np.concatenate([depot_value_index])]
-        self.total_time_warp = np.sum(selected_values)
+        selected_values = time_warp_complete[np.concatenate([depot_value_index])]
+        total_time_warp = np.sum(selected_values)
 
-        selected_values = self.duration_complete[np.concatenate([depot_value_index])]
+        selected_values = duration_complete[np.concatenate([depot_value_index])]
         exceeding_values = selected_values[selected_values > self.vrp_instance.max_duration_of_a_route]
         differences = exceeding_values - self.vrp_instance.max_duration_of_a_route
-        self.total_duration_violation = np.sum(differences)
+        total_duration_violation = np.sum(differences)
 
-        zero_indices = np.where(self.p_complete == 0)[0]
-        selected_values = self.p_complete[np.concatenate([zero_indices - 1])]
-        self.total_fitness = np.sum(selected_values)
+        zero_indices = np.where(p_complete == 0)[0]
+        selected_values = p_complete[np.concatenate([zero_indices - 1])]
+        total_fitness = np.sum(selected_values)
+
+        return total_fitness, total_distance, total_time_warp, total_duration_violation
 
     def collect_routes(self, obj, from_vehicle_i) -> None:
         """
@@ -391,9 +391,42 @@ class GA:
         param: top_individuals - structured 3D array ["individual"]["chromosome]["fitness"]
         """
 
-        worst_individuals_i = np.argsort(self.population["fitness"])[
+        worst_individuals_i = np.argsort(self.population["biased_fitness"])[
                               :int(self.n_elite / self.population_size)]
         self.population[worst_individuals_i] = top_individuals
+
+    # def do_crossover(self, children: np.ndarray) -> np.ndarray:
+    #     """
+    #     Handles the crossover
+    #     param: children - empty 1D array
+    #     return: children - 1D array of the generation holding chromosome information
+    #     """
+    #
+    #     def crossover_for_individual(individual):
+    #         if random() <= self.p_c:
+    #             # Generate 2 children by swapping parents in the crossover operation
+    #             child, fitness = self.crossover.periodic_crossover_with_insertions(
+    #                 self.population[individual]["chromosome"],
+    #                 self.population[individual + 1]["chromosome"],
+    #                 self)
+    #         else:
+    #             child = self.population[individual]["chromosome"]
+    #             fitness = self.population[individual]["fitness"]
+    #
+    #         return child, fitness
+    #
+    #     with ThreadPoolExecutor() as executor:
+    #         results = list(executor.map(crossover_for_individual, range(0, self.population_size, 2)))
+    #
+    #     # Unpack the results
+    #     for i, (child, fitness) in enumerate(results):
+    #         children[i * 2] = child
+    #         self.population[i * 2]["fitness"] = fitness
+    #
+    #         children[i * 2 + 1] = self.population[i * 2 + 1]["chromosome"]
+    #         self.population[i * 2 + 1]["fitness"] = self.population[i * 2 + 1]["fitness"]
+    #
+    #     return children
 
     def do_crossover(self, children: ndarray) -> ndarray:
         """
@@ -407,12 +440,12 @@ class GA:
 
             if random() <= self.p_c:
                 # Generate 2 children by swapping parents in argument of crossover operation
-                children[individual] = self.crossover.periodic_crossover_with_insertions(
+                children[individual], self.population[individual]["fitness"] = self.crossover.periodic_crossover_with_insertions(
                     self.population[individual]["chromosome"],
                     self.population[individual + 1]["chromosome"],
                     self)
 
-                children[individual + 1] = self.crossover.periodic_crossover_with_insertions(
+                children[individual + 1], self.population[individual + 1]["fitness"] = self.crossover.periodic_crossover_with_insertions(
                     self.population[individual + 1]["chromosome"],
                     self.population[individual]["chromosome"],
                     self)
@@ -463,7 +496,7 @@ class GA:
 
         return children
 
-    def log_configuration(self, individual) -> None:
+    def log_configuration(self, individual, p_complete, pred_complete, distance_complete, capacity_complete, time_complete, time_warp_complete, duration_complete) -> None:
         """
         Logs every relevant parameter
         param: individual - the best solution found
@@ -491,11 +524,11 @@ class GA:
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
                        f'\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\nSolution Description: '
-                       f'\np: {self.p_complete} '
-                       f'\npred: {self.pred_complete} '
-                       f'\ndistance {self.distance_complete}'
-                       f'\nload: {self.capacity_complete} '
-                       f'\ntime: {self.time_complete} '
-                       f'\ntime warps: {self.time_warp_complete} '
-                       f'\nduration: {self.duration_complete}'
+                       f'\np: {p_complete} '
+                       f'\npred: {pred_complete} '
+                       f'\ndistance {distance_complete}'
+                       f'\nload: {capacity_complete} '
+                       f'\ntime: {time_complete} '
+                       f'\ntime warps: {time_warp_complete} '
+                       f'\nduration: {duration_complete}'
                        f'\n\nAll individuals: {self.population}')

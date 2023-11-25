@@ -1,4 +1,5 @@
 from random import random, shuffle
+from typing import Tuple
 
 import numpy as np
 
@@ -91,7 +92,7 @@ class Crossover:
 
         return child
 
-    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA") -> np.ndarray:
+    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA") -> Tuple[np.ndarray, float]:
         """
         Advanced crossover inspired by (Vidal 2012)
         param: parent 1 and parent 2 - 1D array
@@ -193,7 +194,9 @@ class Crossover:
         all_customers = list(range(1, ga.vrp_instance.n_customers + 1))
         existing_customers = list(child[ga.vrp_instance.n_depots:])
         missing_customers = np.setdiff1d(all_customers, existing_customers)
-
+        best_fitness = float("inf")
+        max_improvements = 2
+        max_depot_iterations = 3
         for m_customer in missing_customers:
             best_fitness = float("inf")
             best_position = ga.vrp_instance.n_depots
@@ -208,7 +211,7 @@ class Crossover:
                 # Range +1 to also insert after last index
                 shuffle_insertion = list(range(depot_n_customers + 1))
                 shuffle(shuffle_insertion)
-                for customer_i in shuffle_insertion:
+                for customer_i in shuffle_insertion[:max_depot_iterations]:
 
                     # Enable only insert position after depot range if last depot
                     if customer_i == depot_n_customers and depot_i != ga.vrp_instance.n_depots - 1:
@@ -217,18 +220,18 @@ class Crossover:
                     temp_child = child.copy()
                     temp_child = np.insert(temp_child, customer_offset + customer_i, m_customer)
                     temp_child[depot_i] += 1
-                    ga.split.split(temp_child)
+                    p_complete = ga.split.split(temp_child)[0]
 
-                    zero_indices = np.where(ga.p_complete == 0)[0]
-                    selected_values = ga.p_complete[np.concatenate([zero_indices - 1])]
-                    ga.total_fitness = np.sum(selected_values)
+                    zero_indices = np.where(p_complete == 0)[0]
+                    selected_values = p_complete[np.concatenate([zero_indices - 1])]
+                    total_fitness = np.sum(selected_values)
 
-                    if ga.total_fitness < best_fitness:
-                        best_fitness = ga.total_fitness
+                    if total_fitness < best_fitness:
+                        best_fitness = total_fitness
                         best_position = customer_offset + customer_i
                         depot_assignment = depot_i
                         n_improvements += 1
-                        if n_improvements >= 2:
+                        if n_improvements >= max_improvements:
                             break
 
                 customer_offset += depot_n_customers
@@ -238,4 +241,4 @@ class Crossover:
             # Increment the customer count for the corresponding depot
             child[depot_assignment] += 1
 
-        return child
+        return child, best_fitness

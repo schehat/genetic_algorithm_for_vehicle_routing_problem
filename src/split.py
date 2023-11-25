@@ -14,9 +14,7 @@ class Split:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
-    def split(self, chromosome: ndarray) -> None:
-        if chromosome.ndim != 1:
-            print(1)
+    def split(self, chromosome: ndarray) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray, ndarray, ndarray]:
         # Determine indices for chromosome "splitting"
         customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
 
@@ -54,13 +52,15 @@ class Split:
         #         duration_complete += duration_list
 
         # Convert list to array for performance
-        self.ga.p_complete = np.array(p_complete)
-        self.ga.pred_complete = np.array(pred_complete)
-        self.ga.distance_complete = np.array(distance_complete)
-        self.ga.capacity_complete = np.array(capacity_complete)
-        self.ga.time_complete = np.array(time_complete)
-        self.ga.time_warp_complete = np.array(time_warp_complete)
-        self.ga.duration_complete = np.array(duration_complete)
+        # self.ga.p_complete = np.array(p_complete)
+        # self.ga.pred_complete = np.array(pred_complete)
+        # self.ga.distance_complete = np.array(distance_complete)
+        # self.ga.capacity_complete = np.array(capacity_complete)
+        # self.ga.time_complete = np.array(time_complete)
+        # self.ga.time_warp_complete = np.array(time_warp_complete)
+        # self.ga.duration_complete = np.array(duration_complete)
+
+        return np.array(p_complete), np.array(pred_complete), np.array(distance_complete), np.array(capacity_complete), np.array(time_complete), np.array(time_warp_complete), np.array(duration_complete)
 
     def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[
         list, list, list, list, list, list, list]:
@@ -100,11 +100,7 @@ class Split:
 
                 i = t + 1
 
-                try:
-                    customer_value_i = chromosome[customer_offset + (i - 1)]
-                except:
-                    print("SPLIT ERROR")
-                    break
+                customer_value_i = chromosome[customer_offset + (i - 1)]
                 customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
 
                 # 2 * Capacity to allow infeasible solution for better space search

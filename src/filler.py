@@ -189,3 +189,37 @@
 #             pred_complete = np.concatenate((pred_complete, pred))
 #
 #         return p_complete, pred_complete
+
+
+# TODO: Parallel education
+# def educate_chromosome(educated_chromosome):
+#     return self.education.run(educated_chromosome)
+#
+# with ThreadPoolExecutor() as executor:
+#     processed_chromosomes = list(executor.map(educate_chromosome, self.population["chromosome"]))
+#
+# for i, processed_chromosome in enumerate(processed_chromosomes):
+#     self.population[i]["chromosome"] = processed_chromosome
+#-----------------------------------------------------------
+# def educate_chromosome(educated_chromosome):
+#     return self.education.run(educated_chromosome)
+#
+# population_size = len(self.population["chromosome"])
+# max_workers = 5  # Specify the number of threads
+# chunk_size = population_size // max_workers  # Calculate chunk size
+#
+# with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#     # Submit tasks in chunks
+#     chunks = [self.population["chromosome"][i:i + chunk_size] for i in range(0, population_size, chunk_size)]
+#     processed_chromosomes = []
+#
+#     for chunk in chunks:
+#         chunk_results = list(executor.map(educate_chromosome, chunk))
+#         processed_chromosomes.extend(chunk_results)
+#
+# # Update the population with the processed chromosomes
+# for i, processed_chromosome in enumerate(processed_chromosomes):
+#     self.population[i]["chromosome"] = processed_chromosome
+
+# children = self.do_mutation(children)
+
