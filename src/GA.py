@@ -33,7 +33,7 @@ class GA:
     generation = 0
     num_generation_no_improvement = 0
     NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = None
-    NUM_GENERATIONS_DIVERSITY = 6
+    NUM_GENERATIONS_DIVERSITY = 20
     MAX_RUNNING_TIME_IN_S = 3600
     start_time = None
     end_time = None
@@ -47,7 +47,7 @@ class GA:
                  local_search_complete,
                  tournament_size: int = 1,
                  tournament_size_increment: int = 1,
-                 n_elite: float = 5,
+                 n_elite: float = 2,
                  p_c: float = 0.9,
                  p_m: float = 0.25):
 
@@ -62,7 +62,7 @@ class GA:
         self.local_search_complete = local_search_complete
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
-        self.tournament_size_increment_step = 2
+        self.tournament_size_increment_step = 10
         self.n_elite = n_elite
         self.p_c = p_c
         self.p_m = p_m
@@ -85,7 +85,7 @@ class GA:
             ("duration_violation", float),
             ("diversity_contribution", float),
             ("fitness_ranked", int),
-            ("diversity_control_ranked", int),
+            ("diversity_contribution_ranked", int),
             ("biased_fitness", float)
         ])
         self.population = np.zeros(self.population_size, dtype=population_type)
@@ -122,7 +122,7 @@ class GA:
                 self.population[i]["time_warp"] = total_time_warp
                 self.population[i]["duration_violation"] = total_duration_violation
 
-            # self.calculate_biased_fitness()
+            self.calculate_biased_fitness()
 
             # Save statistics about raw fitness
             self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
@@ -149,6 +149,7 @@ class GA:
             # Increasing selection pressure over time by increasing tournament size
             if self.generation % self.tournament_size_increment_step == 0:
                 self.tournament_size += self.tournament_size_increment
+                self.n_elite += 1
             self.selection_method(self.population, self.tournament_size)
             self.do_elitism(top_individuals)
 
@@ -163,9 +164,6 @@ class GA:
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
             print(f"after crossover time: {int(minutes)}:{int(seconds)}")
 
-            self.end_time = time.time()
-            minutes, seconds = divmod(self.end_time - self.start_time, 60)
-            print(f"before education time: {int(minutes)}:{int(seconds)}")
             for i, chromosome in enumerate(children):
                 # if random() <= self.p_education:
                 #     try:
@@ -203,7 +201,23 @@ class GA:
             if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
             if self.NUM_GENERATIONS_DIVERSITY <= self.num_generation_no_improvement:
-                pass
+                print("DIVERSITY PROCEDURE")
+                for i, chromosome in enumerate(self.population["chromosome"]):
+                    total_fitness, total_distance, total_time_warp, total_duration_violation = self.decode_chromosome(chromosome)
+                    self.population[i]["fitness"] = total_fitness
+                    self.population[i]["distance"] = total_distance
+                    self.population[i]["time_warp"] = total_time_warp
+                    self.population[i]["duration_violation"] = total_duration_violation
+
+                sorted_population = np.sort(self.population, order='fitness')
+                # Determine the number of individuals to keep (30%)
+                num_to_keep = int(0.5 * len(self.population))
+                # Extract the 30% best individuals
+                best_individuals = sorted_population[:num_to_keep].copy()
+                self.initial_population(self)
+                # Insert the best individuals into the new population
+                self.population[:num_to_keep] = best_individuals
+
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         self.local_search_complete(self, self.best_solution)
@@ -359,7 +373,7 @@ class GA:
                                                                                   len(diversity_contribution_indexes) + 1)
 
         # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
-        biased_fitness = fitness_ranked + (1 - self.n_elite / self.population_size) * diversity_contribution_ranked
+        biased_fitness = fitness_ranked + 0.5 * (1 - self.n_elite / self.population_size) * diversity_contribution_ranked
 
         # Update the population array with the new values
         self.population["fitness_ranked"] = fitness_ranked
@@ -372,7 +386,7 @@ class GA:
             for j, chromosome_b in enumerate(self.population["chromosome"]):
                 # Avoid calculating distance with the same chromosome
                 if i != j:
-                    distance = broken_pairs_distance(chromosome_a, chromosome_b)
+                    distance = broken_pairs_distance(chromosome_a, chromosome_b, self.vrp_instance.n_depots)
                     distances.append((j, distance))
 
             # Sort distances and pick n_closest_neighbors
@@ -496,7 +510,7 @@ class GA:
 
         return children
 
-    def log_configuration(self, individual, p_complete, pred_complete, distance_complete, capacity_complete, time_complete, time_warp_complete, duration_complete) -> None:
+    def log_configuration(self, individual) -> None:
         """
         Logs every relevant parameter
         param: individual - the best solution found
@@ -524,11 +538,11 @@ class GA:
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
                        f'\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\nSolution Description: '
-                       f'\np: {p_complete} '
-                       f'\npred: {pred_complete} '
-                       f'\ndistance {distance_complete}'
-                       f'\nload: {capacity_complete} '
-                       f'\ntime: {time_complete} '
-                       f'\ntime warps: {time_warp_complete} '
-                       f'\nduration: {duration_complete}'
+                       # f'\np: {p_complete} '
+                       # f'\npred: {pred_complete} '
+                       # f'\ndistance {distance_complete}'
+                       # f'\nload: {capacity_complete} '
+                       # f'\ntime: {time_complete} '
+                       # f'\ntime warps: {time_warp_complete} '
+                       # f'\nduration: {duration_complete}'
                        f'\n\nAll individuals: {self.population}')

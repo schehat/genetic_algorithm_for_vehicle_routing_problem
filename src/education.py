@@ -13,7 +13,7 @@ class Education:
     Serves as a local search mechanism superior to random mutation
     """
 
-    def __init__(self, ga: "GA", max_visit_sequence: int = 5):
+    def __init__(self, ga: "GA", max_visit_sequence: int = 3):
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
         self.neighborhood_iterations = math.floor(0.05 * (ga.vrp_instance.n_depots + ga.vrp_instance.n_customers))
@@ -31,7 +31,7 @@ class Education:
         self.pattern_improvement(chromosome, fitness, customer_index_list)
         # # Depot assignment changed, need to update indices
         customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
-        chromosome, _ = self.route_improvement(chromosome, customer_index_list)
+        # chromosome, _ = self.route_improvement(chromosome, customer_index_list)
 
         return chromosome
 
@@ -86,11 +86,13 @@ class Education:
         # Shuffle to achieve random order which customer is selected
         shuffle(shuffle_single_depot_chromosome)
 
-        best_fitness = float('inf')
+        best_fitness: float
         best_insert_position = None
-        max_improvements = 2
+        # max_improvements = 2
         max_depot_iterations = 3
         for customer in shuffle_single_depot_chromosome:
+            temp = single_depot_chromosome.copy()
+            best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
             n_improvements = 0
@@ -113,10 +115,13 @@ class Education:
 
                 # Remove the customer for the next iteration
                 single_depot_chromosome.pop(insert_position)
-                if n_improvements >= max_improvements:
-                    break
+                # if n_improvements >= max_improvements:
+                #     break
 
-            single_depot_chromosome.insert(best_insert_position, customer)
+            if best_insert_position is not None:
+                single_depot_chromosome.insert(best_insert_position, customer)
+            else:
+                single_depot_chromosome = temp.copy()
 
         # Remove depot information at the end
         return depot_i, single_depot_chromosome[1:], best_fitness

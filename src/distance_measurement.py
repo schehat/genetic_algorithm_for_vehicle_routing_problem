@@ -2,7 +2,7 @@ import numpy as np
 from numpy.core.records import ndarray
 
 
-def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> int:
+def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray, n_depots) -> int:
     """
     Counts number of paris in chromosome_a separated in chromosome_b as diversity distance measurement (Prins 2009)
     param: chromosome_a, chromosome b
@@ -10,12 +10,12 @@ def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> int:
     """
 
     # Create a mapping of customers to their indices in chromosome_b
-    index_mapping = {customer: i for i, customer in enumerate(chromosome_b)}
+    index_mapping = {customer: i for i, customer in enumerate(chromosome_b[n_depots:])}
     broken_pairs_count = 0
-    n = len(chromosome_a)
+    n = len(chromosome_a[:n_depots])
 
     for i in range(n - 1):
-        customer_a1, customer_a2 = chromosome_a[i], chromosome_a[i + 1]
+        customer_a1, customer_a2 = chromosome_a[n_depots + i], chromosome_a[n_depots + i + 1]
 
         # Find the positions of the customers in B
         index_b1, index_b2 = index_mapping[customer_a1], index_mapping[customer_a2]

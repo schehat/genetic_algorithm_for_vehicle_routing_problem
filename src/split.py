@@ -100,7 +100,11 @@ class Split:
 
                 i = t + 1
 
-                customer_value_i = chromosome[customer_offset + (i - 1)]
+                try:
+                    customer_value_i = chromosome[customer_offset + (i - 1)]
+                except:
+                    print("SPLIT ERROR")
+                    break
                 customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
 
                 # 2 * Capacity to allow infeasible solution for better space search
