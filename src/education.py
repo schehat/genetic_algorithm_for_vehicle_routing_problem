@@ -105,8 +105,11 @@ class Education:
         for customer in shuffle_single_depot_chromosome:
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
+            n_improvements = 0
             # Starting from 1 to exclude depot and until len + 1 to add as last element
-            for insert_position in range(1, len(single_depot_chromosome) + 1):
+            shuffle_insertion = list(range(1, len(single_depot_chromosome) + 1))
+            shuffle(shuffle_insertion)
+            for insert_position in shuffle_insertion:
                 # Insert the customer at the specified position
                 single_depot_chromosome.insert(insert_position, customer)
 
@@ -118,9 +121,12 @@ class Education:
                 if fitness < best_fitness:
                     best_fitness = fitness
                     best_insert_position = insert_position
+                    n_improvements += 1
 
                 # Remove the customer for the next iteration
                 single_depot_chromosome.pop(insert_position)
+                if n_improvements >= 2:
+                    break
 
             single_depot_chromosome.insert(best_insert_position, customer)
 
@@ -229,7 +235,8 @@ class Education:
             swapping_genes2,
             self.chromosome[start_pick_depot1 + seq_length_depot1: start_pick_depot2],
             swapping_genes1,
-            self.chromosome[start_pick_depot2 + seq_length_depot2:self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers]
+            self.chromosome[
+            start_pick_depot2 + seq_length_depot2:self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers]
         ])
 
     def n2_2opt_asterisk(self) -> ndarray:
@@ -300,14 +307,14 @@ class Education:
         start_index = np.random.randint(self.customer_index_list[0], len(self.chromosome) - seq_length)
 
         # Extract the selected sequence
-        selected_sequence = self.chromosome[start_index:start_index+seq_length]
+        selected_sequence = self.chromosome[start_index:start_index + seq_length]
 
         # Reverse the sequence
         reversed_sequence = selected_sequence[::-1]
 
         # Swap the reversed sequence in the chromosome
         new_chromosome = np.copy(self.chromosome)
-        new_chromosome[start_index:start_index+seq_length] = reversed_sequence
+        new_chromosome[start_index:start_index + seq_length] = reversed_sequence
 
         return new_chromosome
 

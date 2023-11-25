@@ -47,7 +47,7 @@ class GA:
                  tournament_size_increment: int = 1,
                  n_elite: float = 5,
                  p_c: float = 0.9,
-                 p_m: float = 0.3):
+                 p_m: float = 1.0):
 
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
@@ -63,8 +63,10 @@ class GA:
         self.n_elite = n_elite
         self.p_c = p_c
         self.p_m = p_m
-        self.p_education = 1.0
+        self.p_education = 0.8
         self.p_repair = 0.5
+        self.min_population_size = 20
+        self.max_population_size = 20
 
         self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = self.max_generations * 0.5
         self.split = Split(self)
@@ -166,19 +168,29 @@ class GA:
             children = self.do_crossover(children)
 
             for i, chromosome in enumerate(self.population["chromosome"]):
-                self.population[i]["chromosome"] = self.education.run(chromosome)
-                self.decode_chromosome(self.population[i]["chromosome"])
-                self.population[i]["fitness"] = self.total_fitness
-                self.population[i]["distance"] = self.total_distance
-                self.population[i]["time_warp"] = self.total_time_warp
-                self.population[i]["duration_violation"] = self.total_duration_violation
-
+                if random() <= self.p_education:
+                    self.population[i]["chromosome"] = self.education.run(chromosome)
+                    # self.decode_chromosome(self.population[i]["chromosome"])
+                    # self.population[i]["fitness"] = self.total_fitness
+                    # self.population[i]["distance"] = self.total_distance
+                    # self.population[i]["time_warp"] = self.total_time_warp
+                    # self.population[i]["duration_violation"] = self.total_duration_violation
+                else:
+                    rand_num = random()
+                    if rand_num < 0.33:
+                        self.mutation.swap(children[i])
+                    elif 0.33 <= rand_num < 0.66:
+                        self.mutation.inversion(children[i])
+                    else:
+                        self.mutation.insertion(children[i])
             # children = self.do_mutation(children)
 
             # Replace old generation with new generation
             self.population["chromosome"] = children
 
-            print(f"Generation: {self.generation}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {time.time() - self.start_time}")
+            self.end_time = time.time()
+            minutes, seconds = divmod(self.end_time - self.start_time, 60)
+            print(f"Generation: {self.generation + 1}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Track number of no improvements
             if self.fitness_stats[self.generation]["min"] > self.best_solution["fitness"]:
@@ -468,7 +480,7 @@ class GA:
         with open(os.path.join(directory, 'best_chromosome.txt'), 'a') as file:
             file.write(f'Population size: {self.population_size}'
                        f'\nMax generations: {self.max_generations}'
-                       f'\nExecuted generations: {self.generation}'                       
+                       f'\nExecuted generations: {self.generation}'
                        f'\nFitness scaling: {self.fitness_scaling.__name__}'
                        f'\nSelection method: {self.selection_method.__name__}'
                        f'\nAdaptive tournament size: {self.tournament_size}'
@@ -477,7 +489,7 @@ class GA:
                        f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
                        f'\nBest individual found: {individual}'
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
-                       f'\nFitness stats min: {self.fitness_stats["min"][:self.generation+1]} '
+                       f'\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '

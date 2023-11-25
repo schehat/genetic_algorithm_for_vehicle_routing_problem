@@ -56,7 +56,7 @@ if __name__ == "__main__":
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
-    POPULATION_SIZE = 20
+    POPULATION_SIZE = 50
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
     MAX_GENERATIONS = 50
