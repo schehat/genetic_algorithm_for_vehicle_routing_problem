@@ -92,7 +92,7 @@ class Crossover:
 
         return child
 
-    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA") -> Tuple[np.ndarray, float]:
+    def periodic_crossover_with_insertions(self, parent1: np.ndarray, parent2: np.ndarray, ga: "GA", fitness:float) -> Tuple[np.ndarray, float]:
         """
         Advanced crossover inspired by (Vidal 2012)
         param: parent 1 and parent 2 - 1D array
@@ -194,11 +194,10 @@ class Crossover:
         all_customers = list(range(1, ga.vrp_instance.n_customers + 1))
         existing_customers = list(child[ga.vrp_instance.n_depots:])
         missing_customers = np.setdiff1d(all_customers, existing_customers)
-        best_fitness = float("inf")
+        best_fitness = fitness
         max_improvements = 2
         max_depot_iterations = 3
         for m_customer in missing_customers:
-            best_fitness = float("inf")
             best_position = ga.vrp_instance.n_depots
             depot_assignment = 0
             n_improvements = 0

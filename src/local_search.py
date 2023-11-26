@@ -28,7 +28,7 @@ def two_opt(ga: GA, individual: ndarray):
             new_route[i + 1] = edge_j[0]
             new_route[j] = edge_i[1]
 
-            total_fitness, total_distance, total_time_warp, total_duration_violation, _, _ = ga.decode_chromosome(new_route)
+            total_fitness, total_distance, total_time_warp, total_duration_violation = ga.decode_chromosome(new_route)
             new_fitness = total_fitness
 
             if new_fitness < individual["fitness"]:

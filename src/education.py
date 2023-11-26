@@ -16,9 +16,9 @@ class Education:
     def __init__(self, ga: "GA", max_visit_sequence: int = 3):
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
-        self.neighborhood_iterations = math.floor(0.05 * (ga.vrp_instance.n_depots + ga.vrp_instance.n_customers))
+        self.neighborhood_iterations = 2
 
-    def run(self, chromosome: ndarray) -> ndarray:
+    def run(self, chromosome: ndarray, current_fitness: float) -> Tuple[ndarray, float]:
         """
         Runtime logic
         param: chromosome - being applied education
@@ -27,15 +27,15 @@ class Education:
 
         # Determine indices for chromosome "splitting"
         customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
-        chromosome, fitness = self.route_improvement(chromosome, customer_index_list)
-        self.pattern_improvement(chromosome, fitness, customer_index_list)
-        # # Depot assignment changed, need to update indices
-        customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
-        # chromosome, _ = self.route_improvement(chromosome, customer_index_list)
+        chromosome, fitness = self.route_improvement(chromosome, customer_index_list, current_fitness)
+        chromosome, fitness = self.pattern_improvement(chromosome, fitness, customer_index_list)
 
-        return chromosome
+        if fitness < current_fitness:
+            current_fitness = fitness
 
-    def route_improvement(self, chromosome: ndarray, customer_index_list: list) -> Tuple[ndarray, float]:
+        return chromosome, current_fitness
+
+    def route_improvement(self, chromosome: ndarray, customer_index_list: list, current_fitness) -> Tuple[ndarray, float]:
         """
         Route improvement deals with the configuration of the customers with the route of a single depot.
         Here is the management of the all the depots held for configuring the new chromosome
@@ -88,7 +88,7 @@ class Education:
 
         best_fitness: float
         best_insert_position = None
-        # max_improvements = 2
+        max_improvements = 2
         max_depot_iterations = 3
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
@@ -115,8 +115,8 @@ class Education:
 
                 # Remove the customer for the next iteration
                 single_depot_chromosome.pop(insert_position)
-                # if n_improvements >= max_improvements:
-                #     break
+                if n_improvements >= max_improvements:
+                    break
 
             if best_insert_position is not None:
                 single_depot_chromosome.insert(best_insert_position, customer)
@@ -138,11 +138,11 @@ class Education:
         # Execute the methods in the shuffled order
         for method in methods:
             # Sets the best candidate as the new self.chromosome
-            chromosome = self.run_neighborhood_search(method, chromosome, fitness, customer_index_list)
+            chromosome, fitness = self.run_neighborhood_search(method, chromosome, fitness, customer_index_list)
 
-        return chromosome
+        return chromosome, fitness
 
-    def run_neighborhood_search(self, neighborhood_search, chromosome: ndarray, fitness: float, customer_index_list: list) -> ndarray:
+    def run_neighborhood_search(self, neighborhood_search, chromosome: ndarray, fitness: float, customer_index_list: list) -> Tuple[ndarray, float]:
         """
         Runs each neighbor method according to the neighbor exploration of 5% and picks the best solution
         """
@@ -163,7 +163,7 @@ class Education:
                 best_candidate = chromosome_candidate
                 best_fitness = chromosome_candidate_fitness
 
-        return best_candidate
+        return best_candidate, best_fitness
 
     def n1_swap_and_relocate(self, chromosome, customer_index_list) -> ndarray:
         """
