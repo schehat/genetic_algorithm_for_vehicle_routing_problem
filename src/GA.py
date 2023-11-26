@@ -143,9 +143,11 @@ class GA:
             # self.fitness_scaling(self.population)
 
             # Increasing selection pressure over time by simple increment of parameters
-            # if self.generation % self.adaptive_step_size == 0:
-            #     self.tournament_size += self.tournament_size_increment
-            #     self.n_elite += self.elite_increment
+            if (self.generation + 1) % self.adaptive_step_size == 0:
+                #     self.tournament_size += self.tournament_size_increment
+                #     self.n_elite += self.elite_increment
+                # self.kill_clones()
+                pass
 
             # Before starting the parent selection. Save percentage of best individuals
             top_individuals_i = np.argsort(self.population["biased_fitness"])[
@@ -174,7 +176,7 @@ class GA:
             if min_fitness < self.best_solution['fitness']:
                 self.best_solution = self.population[np.argmin(self.population["fitness"])].copy()
 
-            # Diversify population. TODO: SURVIVOR SELECTOR
+            # Diversify population. TODO: SURVIVOR SELECTOR AND DELETE CLONES
             if self.NUM_GENERATIONS_DIVERSITY <= self.diversity_increment:
                 print("DIVERSITY PROCEDURE")
                 self.diversity_increment = 0
@@ -231,7 +233,7 @@ class GA:
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         self.local_search_complete(self, self.best_solution)
         self.end_time = time.time()
-        # Need to decode again to log chromosome correctly after local search. TODO
+        # Need to decode again to log chromosome correctly after local search
         self.decode_chromosome(self.best_solution["chromosome"])
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         if self.fitness_stats[self.generation]["min"] >= self.best_solution["fitness"]:
@@ -414,6 +416,32 @@ class GA:
             avg_distance = np.mean([dist for _, dist in n_closest_neighbors])
             # Set diversity_contribution
             self.population[i]["diversity_contribution"] = avg_distance
+
+    # TODO: SURVIVOR SELECTOR IMPLEMENTATION PROPERLY
+    def kill_clones(self):
+        print("KILL CLONES")
+        unique_fitness_values = set()
+        filtered_population = []
+
+        for ind in self.population:
+            fitness_value = ind["fitness"]
+            diversity_contribution = ind["diversity_contribution"]
+
+            if diversity_contribution != 0 and fitness_value not in unique_fitness_values:
+                unique_fitness_values.add(fitness_value)
+                filtered_population.append(ind.copy())
+
+        initial_population_random(self)
+        self.population[:len(filtered_population)] = np.array(filtered_population)
+
+        # Fitness evaluation updating for the randoms
+        for i, chromosome in enumerate(self.population["chromosome"][len(filtered_population):]):
+            total_fitness, total_distance, total_time_warp, total_duration_violation = self.decode_chromosome(
+                chromosome)
+            self.population[i]["fitness"] = total_fitness
+            self.population[i]["distance"] = total_distance
+            self.population[i]["time_warp"] = total_time_warp
+            self.population[i]["duration_violation"] = total_duration_violation
 
     def do_elitism(self, top_individuals: ndarray) -> None:
         """
