@@ -49,9 +49,9 @@ class GA:
                  fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_complete,
-                 tournament_size: int = 4,
+                 tournament_size: int = 2,
                  tournament_size_increment: int = 1,
-                 p_elite: float = 0.05,
+                 p_elite: float = 0.1,
                  elite_increment: int = 1,
                  p_c: float = 0.9,
                  p_m: float = 0.3):
@@ -112,9 +112,9 @@ class GA:
 
         self.n_closest_neighbors = 3
         self.diversity_weight = 0.5
-        self.factor_diversity_survival = 0.8
+        self.factor_diversity_survival = 0.5
         self.capacity_penalty_factor = 10
-        self.duration_penalty_factor = 2
+        self.duration_penalty_factor = 5
         self.time_window_penalty = 10
         self.route_data = []
 
@@ -143,9 +143,9 @@ class GA:
             # self.fitness_scaling(self.population)
 
             # Increasing selection pressure over time by simple increment of parameters
-            if self.generation % self.adaptive_step_size == 0:
-                self.tournament_size += self.tournament_size_increment
-                self.n_elite += self.elite_increment
+            # if self.generation % self.adaptive_step_size == 0:
+            #     self.tournament_size += self.tournament_size_increment
+            #     self.n_elite += self.elite_increment
 
             # Before starting the parent selection. Save percentage of best individuals
             top_individuals_i = np.argsort(self.population["biased_fitness"])[
@@ -174,7 +174,7 @@ class GA:
             if min_fitness < self.best_solution['fitness']:
                 self.best_solution = self.population[np.argmin(self.population["fitness"])].copy()
 
-            # Diversify population
+            # Diversify population. TODO: SURVIVOR SELECTOR
             if self.NUM_GENERATIONS_DIVERSITY <= self.diversity_increment:
                 print("DIVERSITY PROCEDURE")
                 self.diversity_increment = 0
@@ -221,7 +221,7 @@ class GA:
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
             print(
-                f"Generation: {self.generation + 1}, Fitness: {self.fitness_stats[self.generation]['min']}, Time: {int(minutes)}:{int(seconds)}")
+                f"Generation: {self.generation + 1}, Min/AVG Fitness: {self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Termination convergence criteria of GA
             self.end_time = time.time()
