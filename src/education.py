@@ -1,4 +1,3 @@
-import math
 from random import random, shuffle
 from typing import Tuple
 
@@ -27,7 +26,7 @@ class Education:
 
         # Determine indices for chromosome "splitting"
         customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
-        chromosome, fitness = self.route_improvement(chromosome, customer_index_list, current_fitness)
+        chromosome, fitness = self.route_improvement(chromosome, customer_index_list)
         chromosome, fitness = self.pattern_improvement(chromosome, fitness, customer_index_list)
 
         if fitness < current_fitness:
@@ -35,7 +34,7 @@ class Education:
 
         return chromosome, current_fitness
 
-    def route_improvement(self, chromosome: ndarray, customer_index_list: list, current_fitness) -> Tuple[ndarray, float]:
+    def route_improvement(self, chromosome: ndarray, customer_index_list: list) -> Tuple[ndarray, float]:
         """
         Route improvement deals with the configuration of the customers with the route of a single depot.
         Here is the management of the all the depots held for configuring the new chromosome
@@ -49,15 +48,6 @@ class Education:
                                                                                       customer_index_list)
             fitness_complete += fitness
             chromosome_complete.append((depot_i, single_chromosome))
-
-        # # Parallel execution
-        # with ThreadPoolExecutor() as executor:
-        #     results = [executor.submit(self.route_improvement_single_depot, depot_i) for depot_i in
-        #                range(self.ga.vrp_instance.n_depots)]
-        #     for future in results:
-        #         depot_i, single_chromosome, fitness = future.result()
-        #         fitness_complete += fitness
-        #         chromosome_complete.append((depot_i, single_chromosome))
 
         # chromosome_complete = sorted(chromosome_complete, key=lambda x: x[0])
         full_chromosome = []
@@ -86,7 +76,7 @@ class Education:
         # Shuffle to achieve random order which customer is selected
         shuffle(shuffle_single_depot_chromosome)
 
-        best_fitness: float
+        best_fitness = float("inf")
         best_insert_position = None
         max_improvements = 2
         max_depot_iterations = 3
@@ -126,7 +116,7 @@ class Education:
         # Remove depot information at the end
         return depot_i, single_depot_chromosome[1:], best_fitness
 
-    def pattern_improvement(self, chromosome: ndarray, fitness: float, customer_index_list: list) -> ndarray:
+    def pattern_improvement(self, chromosome: ndarray, fitness: float, customer_index_list: list) -> Tuple[ndarray, float]:
         """
         Pattern Improvement deals with the configuration of all customers between different depots to
         evaluate better depot assignment

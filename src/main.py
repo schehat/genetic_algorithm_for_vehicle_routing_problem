@@ -7,6 +7,7 @@ from fitness_scaling import power_rank
 from selection import n_tournaments
 from local_search import two_opt
 from initial_population import initial_population_grouping_savings_nnh, initial_population_random
+from src.distance_measurement import broken_pairs_distance
 from vrp import Customer, Depot, VRPInstance
 
 
@@ -64,7 +65,8 @@ if __name__ == "__main__":
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
-    LOCAL_SEARCH_COMPLETE = two_opt
+    LOCAL_SEARCH_METHOD = two_opt
+    DISTANCE_METHOD = broken_pairs_distance
 
     # Configure GA and run
     ga = GA(VRP_INSTANCE,
@@ -73,5 +75,6 @@ if __name__ == "__main__":
             INITIAL_POPULATION,
             FITNESS_SCALING,
             SELECTION_METHOD,
-            LOCAL_SEARCH_COMPLETE)
+            LOCAL_SEARCH_METHOD,
+            DISTANCE_METHOD)
     ga.run()

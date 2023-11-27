@@ -1,9 +1,7 @@
 from numpy import ndarray
 
-from GA import GA
 
-
-def two_opt(ga: GA, individual: ndarray):
+def two_opt(ga: "GA", individual: ndarray):
     """
     Applies two opt in place
     param: ga - genetic algorithm
