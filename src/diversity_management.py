@@ -11,6 +11,7 @@ class DiversityManagement:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
+    # TODO: same values same ranks?
     def calculate_biased_fitness(self):
         self.calculate_diversity_contribution()
 
@@ -28,8 +29,7 @@ class DiversityManagement:
 
         # Assign ranks to fitness_ranked and diversity_contribution_ranked. Start ranks from 1
         fitness_ranked[fitness_indexes] = np.arange(1, len(fitness_indexes) + 1)
-        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1,
-                                                                                  len(diversity_contribution_indexes) + 1)
+        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1, len(diversity_contribution_indexes) + 1)
 
         # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
         biased_fitness = fitness_ranked + self.ga.diversity_weight * diversity_contribution_ranked
@@ -69,7 +69,6 @@ class DiversityManagement:
         # Insert the best individuals into the new population
         self.ga.population[:num_to_keep] = best_individuals
 
-    # TODO: TEST
     def survivor_selection(self):
         print("SURVIVOR SELECTION")
         unique_fitness = set()
@@ -87,15 +86,15 @@ class DiversityManagement:
                 clones.append(individual.copy())
 
         clones = sorted(clones, key=lambda x: x["biased_fitness"])
-        num_clones_to_keep = min(len(clones), int(self.ga.p_selection_survival * len(self.ga.population)))
+        unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
+        # List of individuals sorted by biased_fitness, clones at the end
+        unique_individuals.extend(clones)
 
+        # ga.population will be replaced with random individuals
         initial_population_random(self.ga)
 
-        # Append clones to unique_individuals
-        unique_individuals.extend(clones[:num_clones_to_keep])
-
-        # Convert the combined list back to a structured array before assigning to the population
-        self.ga.population[:len(unique_individuals)] = np.array(unique_individuals, dtype=self.ga.population.dtype)
+        # Keep certain percentage of current generation individuals. Clones will be removed first then the rest according to there biased fitness
+        self.ga.population[:int(self.ga.p_selection_survival * len(self.ga.population))] = np.array(unique_individuals[:int(self.ga.p_selection_survival * len(self.ga.population))], dtype=self.ga.population.dtype)
 
         # Fitness evaluation updating for the randoms
         self.ga.fitness_evaluation()

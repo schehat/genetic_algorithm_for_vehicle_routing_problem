@@ -209,6 +209,7 @@ class GA:
 
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
+                self.do_elitism(top_individuals)
 
             # Diversify population
             if self.diversify_counter >= self.threshold_no_improvement_diversify:
