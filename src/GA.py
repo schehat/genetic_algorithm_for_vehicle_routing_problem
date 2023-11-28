@@ -37,7 +37,7 @@ class GA:
     diversity_increment = 0
     NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT: int
     NUM_GENERATIONS_DIVERSITY: int
-    MAX_RUNNING_TIME_IN_S = 3600
+    MAX_RUNNING_TIME_IN_S = 3600 * 3
     start_time = None
     end_time = None
     children = None
@@ -76,6 +76,7 @@ class GA:
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
         self.adaptive_step_size = 0.1 * self.max_generations
+        self.survivor_selection_step = 0.05 * self.max_generations
         self.n_elite = p_elite * self.population_size
         self.elite_increment = elite_increment
         self.p_c = p_c
@@ -117,7 +118,7 @@ class GA:
         self.n_closest_neighbors = 3
         self.diversity_weight = 0.75
         self.distance_method = distance_method
-        self.factor_diversity_survival = 0.5
+        self.factor_diversity_survival = 0.3
         # TODO: ADAPTIVE
         self.capacity_penalty_factor = 10
         self.duration_penalty_factor = 5
@@ -148,14 +149,17 @@ class GA:
             # self.print_time_and_text("Before Crossover")
             self.do_crossover()
             # self.print_time_and_text("After Crossover")
+            # self.population["chromosome"] = self.children
+            # self.fitness_evaluation()
 
             for i, chromosome in enumerate(self.children):
-                # if random() <= self.p_education:
-                #     try:
-                #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, self.population[i]["fitness"])
-                #     except:
-                #         print("Education Error")
                 if random() <= self.p_m:
+                    # if random() <= self.p_education:
+                    #     try:
+                    #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, self.population[i]["fitness"])
+                    #     except:
+                    #         print("Education Error")
+                    # else:
                     rand_num = random()
                     if rand_num < 0.33:
                         self.mutation.swap(self.children[i])
@@ -174,12 +178,9 @@ class GA:
             self.diversity_management.calculate_biased_fitness()
             self.save_fitness_statistics()
 
-            # Increasing selection pressure over time by simple increment of parameters
             # if (self.generation + 1) % self.adaptive_step_size == 0:
-            #     #     self.tournament_size += self.tournament_size_increment
-            #     #     self.n_elite += self.elite_increment
-            #     # self.kill_clones()
-            #     pass
+            #     self.tournament_size += self.tournament_size_increment
+            #     self.n_elite += self.elite_increment
 
             # Track number of no improvements
             min_current_fitness = self.fitness_stats[self.generation]["min"]
@@ -190,6 +191,9 @@ class GA:
                 self.num_generation_no_improvement = 0
                 self.diversity_increment = 0
                 self.best_solution = self.population[np.argmin(self.population["fitness"])].copy()
+
+            if (self.generation + 1) % self.survivor_selection_step == 0:
+                self.diversity_management.survivor_selection()
 
             # Diversify population
             if self.NUM_GENERATIONS_DIVERSITY <= self.diversity_increment:
@@ -360,6 +364,17 @@ class GA:
             # self.do_adaptive_crossover_and_mutation_rate(individual)
 
             if random() <= self.p_c:
+                # if random() < self.p_education:
+                #     self.children[individual], self.population[individual][
+                #     "fitness"] = self.crossover.periodic_crossover_with_insertions(
+                #     self.population[individual]["chromosome"],
+                #     self.population[individual + 1]["chromosome"], self, self.population[individual]["fitness"])
+                #
+                #     self.children[individual + 1], self.population[individual + 1][
+                #         "fitness"] = self.crossover.periodic_crossover_with_insertions(
+                #         self.population[individual + 1]["chromosome"],
+                #         self.population[individual]["chromosome"], self, self.population[individual + 1]["fitness"])
+                # else:
                 # Generate 2 children by swapping parents in argument of crossover operation
                 self.children[individual] = self.crossover.order_beginning(
                     self.population[individual]["chromosome"],
@@ -368,16 +383,6 @@ class GA:
                 self.children[individual + 1] = self.crossover.order_beginning(
                     self.population[individual + 1]["chromosome"],
                     self.population[individual]["chromosome"])
-            # else:
-            #     children[individual], self.population[individual][
-            #         "fitness"] = self.crossover.periodic_crossover_with_insertions(
-            #         self.population[individual]["chromosome"],
-            #         self.population[individual + 1]["chromosome"], self, self.population[individual]["fitness"])
-            #
-            #     children[individual + 1], self.population[individual + 1][
-            #         "fitness"] = self.crossover.periodic_crossover_with_insertions(
-            #         self.population[individual + 1]["chromosome"],
-            #         self.population[individual]["chromosome"], self, self.population[individual + 1]["fitness"])
             else:
                 self.children[individual] = self.population[individual]["chromosome"]
                 self.children[individual + 1] = self.population[individual + 1]["chromosome"]
@@ -461,8 +466,7 @@ class GA:
         param: top_individuals - structured 3D array ["individual"]["chromosome]["fitness"]
         """
 
-        worst_individuals_i = np.argsort(self.population["fitness"])[
-                              :int(self.population_size / self.n_elite)]
+        worst_individuals_i = np.argsort(self.population["fitness"])[-int(self.population_size / self.n_elite):]
         self.population[worst_individuals_i] = top_individuals
 
     def print_time_and_text(self, text: str):

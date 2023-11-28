@@ -12,7 +12,7 @@ def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray, n_depots
     # Create a mapping of customers to their indices in chromosome_b
     index_mapping = {customer: i for i, customer in enumerate(chromosome_b[n_depots:])}
     broken_pairs_count = 0
-    n = len(chromosome_a[:n_depots])
+    n = len(chromosome_a[n_depots:])
 
     for i in range(n - 1):
         customer_a1, customer_a2 = chromosome_a[n_depots + i], chromosome_a[n_depots + i + 1]

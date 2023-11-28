@@ -69,22 +69,33 @@ class DiversityManagement:
         # Insert the best individuals into the new population
         self.ga.population[:num_to_keep] = best_individuals
 
-    # TODO
     def survivor_selection(self):
         print("SURVIVOR SELECTION")
-        unique_fitness_values = set()
-        filtered_population = []
+        unique_fitness = set()
+        unique_individuals = []
+        clones = []
 
-        for ind in self.ga.population:
-            fitness_value = ind["fitness"]
-            diversity_contribution = ind["diversity_contribution"]
+        for individual in self.ga.population:
+            fitness_value = individual["fitness"]
+            diversity_contribution = individual["diversity_contribution"]
 
-            if diversity_contribution != 0 and fitness_value not in unique_fitness_values:
-                unique_fitness_values.add(fitness_value)
-                filtered_population.append(ind.copy())
+            if diversity_contribution != 0 and fitness_value not in unique_fitness:
+                unique_individuals.append(individual)
+                unique_fitness.add(fitness_value)
+            else:
+                clones.append(individual.copy())
+
+        clones = sorted(clones, key=lambda x: x["biased_fitness"])
+        num_clones_to_keep = min(len(clones), int(self.ga.factor_diversity_survival * len(self.ga.population)))
 
         initial_population_random(self.ga)
-        self.ga.population[:len(filtered_population)] = np.array(filtered_population)
+
+        # Append clones to unique_individuals
+        unique_individuals.extend(clones[:num_clones_to_keep])
+
+        # Convert the combined list back to a structured array before assigning to the population
+        self.ga.population[:len(unique_individuals)] = np.array(unique_individuals, dtype=self.ga.population.dtype)
 
         # Fitness evaluation updating for the randoms
         self.ga.fitness_evaluation()
+        self.calculate_biased_fitness()
