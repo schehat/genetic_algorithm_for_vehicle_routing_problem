@@ -28,15 +28,14 @@ class GA:
         => first depot (index 0) has 5 customers, serving customers 1 - 5
         => second depot (Index 1) has 2 customers, serving customer 6 and 7
         TODO: MIX BETWEEN RANDOM AND LOCAL SEARCH? BIG POPULATION AND RANDOM THEN CUT AND HARD LOCAL SEARCH. SWITCH
-        BETWEEN SYNCHRONOUS AND PARALLEL CROSSOVER. STRAFEN AUCH ERHÖHEN NACH GENERATIONSZAHL
+        TODO: BETWEEN SYNCHRONOUS AND PARALLEL CROSSOVER. STRAFEN AUCH ERHÖHEN NACH GENERATIONSZAHL
+        TODO: Incorparate pattern improvement in normal mutation
     """
 
     TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     generation = 0
-    num_generation_no_improvement = 0
-    diversity_increment = 0
-    NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT: int
-    NUM_GENERATIONS_DIVERSITY: int
+    diversify_counter = 0
+    no_improvement_counter = 0
     MAX_RUNNING_TIME_IN_S = 3600 * 3
     start_time = None
     end_time = None
@@ -51,13 +50,27 @@ class GA:
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_method,
                  distance_method,
+
                  tournament_size: int = 2,
                  tournament_size_increment: int = 1,
                  p_elite: float = 0.1,
                  elite_increment: int = 1,
                  p_c: float = 0.9,
                  p_m: float = 0.3,
-                 p_education: float = 0.25):
+                 p_education: float = 0.25,
+
+                 p_adaptive_step: float = 0.1,
+                 p_survivor_selection_step: float = 0.05,
+                 p_selection_survival: float = 0.3,
+                 p_diversify_step: float = 0.1,
+                 p_diversify_survival: float = 0.3,
+
+                 n_closest_neighbors: int = 3,
+                 diversity_weight: float = 0.75,
+                 capacity_penalty_factor: float = 10.0,
+                 duration_penalty_factor: float = 5.0,
+                 time_window_penalty: float = 10.0
+                 ):
 
         self.vrp_instance: VRPInstance = vrp_instance
         self.population_size = population_size
@@ -75,8 +88,6 @@ class GA:
 
         self.tournament_size = tournament_size
         self.tournament_size_increment = tournament_size_increment
-        self.adaptive_step_size = 0.1 * self.max_generations
-        self.survivor_selection_step = 0.05 * self.max_generations
         self.n_elite = p_elite * self.population_size
         self.elite_increment = elite_increment
         self.p_c = p_c
@@ -84,8 +95,21 @@ class GA:
         self.p_education = p_education
         # self.p_repair = 0.5
 
-        self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT = int(self.max_generations * 0.5)
-        self.NUM_GENERATIONS_DIVERSITY = int(0.1 * self.max_generations)
+        self.adaptive_step_size = p_adaptive_step * self.max_generations
+        self.survivor_selection_step = p_survivor_selection_step * self.max_generations
+        self.p_selection_survival = p_selection_survival
+        self.threshold_no_improvement = int(0.5 * self.max_generations)
+        self.diversify_step = p_diversify_step
+        self.threshold_no_improvement_diversify = int(self.diversify_step * self.max_generations)
+        self.p_diversify_survival = p_diversify_survival
+
+        self.n_closest_neighbors = n_closest_neighbors
+        self.diversity_weight = diversity_weight
+        self.distance_method = distance_method
+        # TODO: ADAPTIVE
+        self.capacity_penalty_factor = capacity_penalty_factor
+        self.duration_penalty_factor = duration_penalty_factor
+        self.time_window_penalty = time_window_penalty
 
         self.p_complete = np.array([], dtype=int)
         self.pred_complete = np.array([], dtype=int)
@@ -114,15 +138,6 @@ class GA:
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
                                                                        ("max_scaled", float), ("avg_scaled", float),
                                                                        ("min_scaled", float)]))
-
-        self.n_closest_neighbors = 3
-        self.diversity_weight = 0.75
-        self.distance_method = distance_method
-        self.factor_diversity_survival = 0.3
-        # TODO: ADAPTIVE
-        self.capacity_penalty_factor = 10
-        self.duration_penalty_factor = 5
-        self.time_window_penalty = 10
         self.route_data = []
 
     def run(self):
@@ -185,18 +200,18 @@ class GA:
             # Track number of no improvements
             min_current_fitness = self.fitness_stats[self.generation]["min"]
             if min_current_fitness > self.best_solution["fitness"] - 0.0000001:
-                self.num_generation_no_improvement += 1
-                self.diversity_increment += 1
+                self.no_improvement_counter += 1
+                self.diversify_counter += 1
             else:
-                self.num_generation_no_improvement = 0
-                self.diversity_increment = 0
+                self.no_improvement_counter = 0
+                self.diversify_counter = 0
                 self.best_solution = self.population[np.argmin(self.population["fitness"])].copy()
 
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
 
             # Diversify population
-            if self.NUM_GENERATIONS_DIVERSITY <= self.diversity_increment:
+            if self.diversify_counter >= self.threshold_no_improvement_diversify:
                 self.diversity_management.diversity_procedure()
 
             self.end_time = time.time()
@@ -205,7 +220,7 @@ class GA:
                 f"Generation: {self.generation + 1}, Min/AVG Fitness: {self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Termination convergence criteria of GA
-            if self.num_generation_no_improvement >= self.NUM_GENERATIONS_NO_IMPROVEMENT_LIMIT or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
+            if self.no_improvement_counter >= self.threshold_no_improvement or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
@@ -494,18 +509,21 @@ class GA:
             os.makedirs(directory)
 
         with open(os.path.join(directory, 'best_chromosome.txt'), 'a') as file:
-            file.write(f'Population size: {self.population_size}'
-                       f'\nMax generations: {self.max_generations}'
-                       f'\nExecuted generations: {self.generation}'
-                       f'\nFitness scaling: {self.fitness_scaling.__name__}'
-                       f'\nSelection method: {self.selection_method.__name__}'
-                       f'\nAdaptive tournament size: {self.tournament_size}'
-                       f'\nElitism: {self.n_elite}'
-                       f'\nBest fitness found before local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])}'
-                       f'\nBest fitness found after local search: {individual["fitness"]:.2f}'
+            file.write(f'Parameters:'
+                       f'\npopulation_size: {self.population_size}, max_generations: {self.max_generations}, executed generations: {self.generation}, threshold_no_improvement: {self.threshold_no_improvement}'
+                       f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
+                       f'\np_c: {self.p_c}, p_m: {self.p_m}, NOT YET p_education: {self.p_education}'
+                       f'\ntournament_size: {self.tournament_size}, n_elite: {self.n_elite}'
+                       f'\nNOT YET adaptive_step_size: {self.adaptive_step_size}, tournament_size_increment: {self.tournament_size_increment}, elite_increment: {self.elite_increment}'
+                       f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival} '
+                       f'\nthreshold_no_improvement_diversify: {self.threshold_no_improvement_diversify}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
+                       f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'
+                       f'\ncapacity_penalty_factor: {self.capacity_penalty_factor}, duration_penalty_factor {self.duration_penalty_factor}, time_window_penalty: {self.time_window_penalty}'
+                       f'\nBest fitness before/after local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])} / {individual["fitness"]}'
                        f'\nBest individual found: {individual}'
                        f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
-                       f'\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
+                       f'\n\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
+                       f'\n\nFitness stats avg: {self.fitness_stats["avg"][:self.generation + 1]} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '

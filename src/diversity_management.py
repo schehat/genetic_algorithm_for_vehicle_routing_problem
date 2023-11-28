@@ -58,17 +58,18 @@ class DiversityManagement:
 
     def diversity_procedure(self):
         print("DIVERSITY PROCEDURE")
-        self.ga.diversity_increment = 0
+        self.ga.diversify_counter = 0
         self.ga.fitness_evaluation()
         sorted_population = np.sort(self.ga.population, order='fitness')
         # Determine the number of individuals to keep
-        num_to_keep = int(self.ga.factor_diversity_survival * len(self.ga.population))
+        num_to_keep = int(self.ga.p_diversify_survival * len(self.ga.population))
         # Extract the best individuals
         best_individuals = sorted_population[:num_to_keep].copy()
         initial_population_random(self.ga)
         # Insert the best individuals into the new population
         self.ga.population[:num_to_keep] = best_individuals
 
+    # TODO: TEST
     def survivor_selection(self):
         print("SURVIVOR SELECTION")
         unique_fitness = set()
@@ -86,7 +87,7 @@ class DiversityManagement:
                 clones.append(individual.copy())
 
         clones = sorted(clones, key=lambda x: x["biased_fitness"])
-        num_clones_to_keep = min(len(clones), int(self.ga.factor_diversity_survival * len(self.ga.population)))
+        num_clones_to_keep = min(len(clones), int(self.ga.p_selection_survival * len(self.ga.population)))
 
         initial_population_random(self.ga)
 
