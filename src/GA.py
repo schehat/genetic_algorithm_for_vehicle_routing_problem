@@ -125,6 +125,7 @@ class GA:
              (self.vrp_instance.n_depots + self.vrp_instance.n_customers,)),
             ("fitness", float),
             ("distance", float),
+            ("capacity_violation", float),
             ("time_warp", float),
             ("duration_violation", float),
             ("diversity_contribution", float),
@@ -133,6 +134,7 @@ class GA:
             ("biased_fitness", float)
         ])
         self.population = np.zeros(self.population_size, dtype=population_type)
+        self.feasible_population = np.zeros(0, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
         self.fitness_stats = np.zeros(max_generations, dtype=np.dtype([("max", float), ("avg", float), ("min", float),
@@ -190,6 +192,7 @@ class GA:
 
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
+            self.insert_into_feasible_population()
             self.diversity_management.calculate_biased_fitness()
             self.save_fitness_statistics()
 
@@ -262,15 +265,16 @@ class GA:
 
     def fitness_evaluation(self):
         for i, chromosome in enumerate(self.population["chromosome"]):
-            total_fitness, total_distance, total_time_warp, total_duration_violation = self.decode_chromosome(
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
                 chromosome)
             self.population[i]["fitness"] = total_fitness
             self.population[i]["distance"] = total_distance
+            self.population[i]["capacity_violation"] = total_capacity_violation
             self.population[i]["time_warp"] = total_time_warp
             self.population[i]["duration_violation"] = total_duration_violation
 
     def decode_chromosome(self, chromosome: ndarray, purpose: Purpose = Purpose.FITNESS) -> Tuple[
-        ndarray, ndarray, ndarray, ndarray]:
+        ndarray, ndarray, ndarray, ndarray, ndarray]:
         """
         Decoding chromosome by traversing the customers considering constraints and fetching the routes.
         Optional purpose for collecting routes for plotting
@@ -338,6 +342,11 @@ class GA:
         selected_values = distance_complete[np.concatenate([depot_value_index])]
         total_distance = np.sum(selected_values)
 
+        selected_values = capacity_complete[np.concatenate([depot_value_index])]
+        exceeding_values = selected_values[selected_values > self.vrp_instance.max_capacity]
+        differences = exceeding_values - self.vrp_instance.max_capacity
+        total_capacity_violation = np.sum(differences)
+
         selected_values = time_warp_complete[np.concatenate([depot_value_index])]
         total_time_warp = np.sum(selected_values)
 
@@ -350,7 +359,7 @@ class GA:
         selected_values = p_complete[np.concatenate([zero_indices - 1])]
         total_fitness = np.sum(selected_values)
 
-        return total_fitness, total_distance, total_time_warp, total_duration_violation
+        return total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation
 
     def collect_routes(self, obj, from_vehicle_i) -> None:
         """
@@ -484,6 +493,19 @@ class GA:
 
         worst_individuals_i = np.argsort(self.population["fitness"])[-int(self.population_size / self.n_elite):]
         self.population[worst_individuals_i] = top_individuals
+
+    def insert_into_feasible_population(self):
+        # Check conditions for time_warp and duration_violation
+        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
+                    self.population["duration_violation"] == 0)
+
+        # Filter elements in self.population based on the condition
+        feasible_individuals = self.population[condition]
+        if len(feasible_individuals) != 0:
+            # Append the filtered individuals to self.feasible_population
+            self.feasible_population = np.append(self.feasible_population, feasible_individuals)
+
+            print(f"LEN FEASIBLE: {len(self.feasible_population)}, LEN INFEASIBLE {len(self.population)}")
 
     def print_time_and_text(self, text: str):
         self.end_time = time.time()

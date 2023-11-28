@@ -60,14 +60,12 @@ class DiversityManagement:
         print("DIVERSITY PROCEDURE")
         self.ga.diversify_counter = 0
         self.ga.fitness_evaluation()
-        sorted_population = np.sort(self.ga.population, order='fitness')
+        self.ga.population.sort(order='fitness')
         # Determine the number of individuals to keep
         num_to_keep = int(self.ga.p_diversify_survival * len(self.ga.population))
-        # Extract the best individuals
-        best_individuals = sorted_population[:num_to_keep].copy()
-        initial_population_random(self.ga)
-        # Insert the best individuals into the new population
-        self.ga.population[:num_to_keep] = best_individuals
+        initial_population_random(self.ga, num_to_keep, self.ga.population_size)
+        self.ga.fitness_evaluation()
+        self.calculate_biased_fitness()
 
     def survivor_selection(self):
         print("SURVIVOR SELECTION")
@@ -90,11 +88,12 @@ class DiversityManagement:
         # List of individuals sorted by biased_fitness, clones at the end
         unique_individuals.extend(clones)
 
+        num_to_keep = int(self.ga.p_selection_survival * len(self.ga.population))
         # ga.population will be replaced with random individuals
-        initial_population_random(self.ga)
+        initial_population_random(self.ga, num_to_keep, self.ga.population_size)
 
         # Keep certain percentage of current generation individuals. Clones will be removed first then the rest according to there biased fitness
-        self.ga.population[:int(self.ga.p_selection_survival * len(self.ga.population))] = np.array(unique_individuals[:int(self.ga.p_selection_survival * len(self.ga.population))], dtype=self.ga.population.dtype)
+        self.ga.population[:num_to_keep] = np.array(unique_individuals[:num_to_keep], dtype=self.ga.population.dtype)
 
         # Fitness evaluation updating for the randoms
         self.ga.fitness_evaluation()

@@ -6,14 +6,14 @@ from numpy import ndarray
 from scipy.spatial.distance import euclidean
 
 
-def initial_population_random(ga: "GA"):
+def initial_population_random(ga: "GA", start_pos: int, end_pos):
     """
     Generate random initial population
     Part 1: average assignment of customers + rest
     Part 2: random permutation
     """
 
-    for i in range(ga.population_size):
+    for i in range(start_pos, end_pos):
         # Part 1: Assign average number of customers for each depot
         depot_customer_count = np.zeros(ga.vrp_instance.n_depots, dtype=int)
         total_customers_assigned = 0
