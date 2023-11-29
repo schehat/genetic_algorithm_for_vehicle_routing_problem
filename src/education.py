@@ -15,7 +15,7 @@ class Education:
     def __init__(self, ga: "GA", max_visit_sequence: int = 3):
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
-        self.neighborhood_iterations = 2
+        self.neighborhood_iterations = 3
 
     def run(self, chromosome: ndarray, current_fitness: float) -> Tuple[ndarray, float]:
         """
@@ -25,8 +25,15 @@ class Education:
         """
 
         # Determine indices for chromosome "splitting"
+
+        # p_complete = self.ga.split.split(chromosome)[0]
+        # zero_indices = np.where(p_complete == 0)[0]
+        # selected_values = p_complete[np.concatenate([zero_indices - 1])]
+        # current_fitness = np.sum(selected_values)
+
         customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
         chromosome, fitness = self.route_improvement(chromosome, customer_index_list)
+        # TODO: Replace current_fitness with fitness return from route_improvement if running RI
         chromosome, fitness = self.pattern_improvement(chromosome, fitness, customer_index_list)
 
         if fitness < current_fitness:
@@ -79,7 +86,7 @@ class Education:
         best_fitness = float("inf")
         best_insert_position = None
         max_improvements = 2
-        max_depot_iterations = 3
+        max_depot_iterations = 5
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
             best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
