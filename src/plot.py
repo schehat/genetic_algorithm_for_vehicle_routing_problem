@@ -87,7 +87,7 @@ class Plot:
         plt.xlabel('X Coordinate')
         plt.ylabel('Y Coordinate')
         plt.title(f'Depot Route Visualization Complete')
-        plt.grid(True)
+        # plt.grid(True)
         plt.legend()
         self.save_plot(f"../results/{self.ga.__class__.__name__}/{self.ga.TIMESTAMP}", f"depot_complete_routes")
         plt.show()
@@ -121,13 +121,13 @@ class Plot:
                 start = j
 
         # Add customer ids and order of iteration as labels to the plot
-        for j in range(len(x_pos)):
-            plt.text(x_pos[j], y_pos[j], customer_ids[j], fontsize=8, ha='right')
-            if j < len(x_pos) - 1:
-                mid_x = (x_pos[j] + x_pos[j + 1]) / 2
-                mid_y = (y_pos[j] + y_pos[j + 1]) / 2
-                plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
-                         bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
+        # for j in range(len(x_pos)):
+        #     plt.text(x_pos[j], y_pos[j], customer_ids[j], fontsize=8, ha='right')
+        #     if j < len(x_pos) - 1:
+        #         mid_x = (x_pos[j] + x_pos[j + 1]) / 2
+        #         mid_y = (y_pos[j] + y_pos[j + 1]) / 2
+        #         plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
+        #                  bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
 
     @staticmethod
     def save_plot(location: str, file_name: str):
