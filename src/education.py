@@ -12,10 +12,15 @@ class Education:
     Serves as a local search mechanism superior to random mutation
     """
 
+    current_fitness: float
+    current_chromosome: ndarray
+    new_fitness: float
+    customer_index_list: list
+
     def __init__(self, ga: "GA", max_visit_sequence: int = 3):
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
-        self.neighborhood_iterations = 3
+        self.neighborhood_iterations = 5
 
     def run(self, chromosome: ndarray, current_fitness: float) -> Tuple[ndarray, float]:
         """
@@ -24,24 +29,16 @@ class Education:
         return: educated chromosome
         """
 
-        # Determine indices for chromosome "splitting"
+        self.current_fitness = current_fitness
+        self.current_chromosome = chromosome.copy()
+        self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
 
-        p_complete = self.ga.split.split(chromosome)[0]
-        zero_indices = np.where(p_complete == 0)[0]
-        selected_values = p_complete[np.concatenate([zero_indices - 1])]
-        current_fitness = np.sum(selected_values)
+        self.route_improvement(self.current_chromosome.copy())
+        self.pattern_improvement()
 
-        customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
-        chromosome, fitness = self.route_improvement(chromosome, customer_index_list)
-        # TODO: Replace current_fitness with fitness return from route_improvement if running RI
-        chromosome, fitness = self.pattern_improvement(chromosome, fitness, customer_index_list)
+        return self.current_chromosome, self.current_fitness
 
-        if fitness < current_fitness:
-            current_fitness = fitness
-
-        return chromosome, current_fitness
-
-    def route_improvement(self, chromosome: ndarray, customer_index_list: list) -> Tuple[ndarray, float]:
+    def route_improvement(self, chromosome: ndarray):
         """
         Route improvement deals with the configuration of the customers with the route of a single depot.
         Here is the management of the all the depots held for configuring the new chromosome
@@ -52,7 +49,7 @@ class Education:
 
         for depot_i in range(self.ga.vrp_instance.n_depots):
             depot_i, single_chromosome, fitness = self.route_improvement_single_depot(depot_i, chromosome,
-                                                                                      customer_index_list)
+                                                                                      self.customer_index_list)
             fitness_complete += fitness
             chromosome_complete.append((depot_i, single_chromosome))
 
@@ -62,7 +59,9 @@ class Education:
         full_chromosome.extend(chromosome[:self.ga.vrp_instance.n_depots])
         full_chromosome.extend(customer for _, customer_info in chromosome_complete for customer in customer_info)
 
-        return np.array(full_chromosome), fitness_complete
+        if fitness_complete < self.current_fitness:
+            self.current_fitness = fitness_complete
+            self.current_chromosome = np.array(full_chromosome)
 
     def route_improvement_single_depot(self, depot_i, chromosome, customer_index_list) -> Tuple[int, list, float]:
         """
@@ -85,18 +84,18 @@ class Education:
 
         best_fitness = float("inf")
         best_insert_position = None
-        max_improvements = 2
-        max_depot_iterations = 5
+        # max_improvements = 2
+        # max_depot_iterations = 5
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
             best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
-            n_improvements = 0
+            # n_improvements = 0
             # Starting from 1 to exclude depot and until len + 1 to add as last element
             shuffle_insertion = list(range(1, len(single_depot_chromosome) + 1))
             shuffle(shuffle_insertion)
-            for insert_position in shuffle_insertion[:max_depot_iterations]:
+            for insert_position in shuffle_insertion:  # [:max_depot_iterations]:
                 # Insert the customer at the specified position
                 single_depot_chromosome.insert(insert_position, customer)
 
@@ -108,12 +107,12 @@ class Education:
                 if fitness < best_fitness:
                     best_fitness = fitness
                     best_insert_position = insert_position
-                    n_improvements += 1
+                    # n_improvements += 1
 
                 # Remove the customer for the next iteration
                 single_depot_chromosome.pop(insert_position)
-                if n_improvements >= max_improvements:
-                    break
+                # if n_improvements >= max_improvements:
+                #     break
 
             if best_insert_position is not None:
                 single_depot_chromosome.insert(best_insert_position, customer)
@@ -123,7 +122,7 @@ class Education:
         # Remove depot information at the end
         return depot_i, single_depot_chromosome[1:], best_fitness
 
-    def pattern_improvement(self, chromosome: ndarray, fitness: float, customer_index_list: list) -> Tuple[ndarray, float]:
+    def pattern_improvement(self):
         """
         Pattern Improvement deals with the configuration of all customers between different depots to
         evaluate better depot assignment
@@ -133,34 +132,35 @@ class Education:
         # Shuffle the list of methods randomly
         shuffle(methods)
         # Execute the methods in the shuffled order
+        fitness = self.current_fitness
+        chromosome = self.current_chromosome.copy()
         for method in methods:
             # Sets the best candidate as the new self.chromosome
-            chromosome, fitness = self.run_neighborhood_search(method, chromosome, fitness, customer_index_list)
+            chromosome, fitness = self.run_neighborhood_search(method, chromosome, fitness)
 
-        return chromosome, fitness
+        if fitness < self.current_fitness:
+            self.current_fitness = fitness
+            self.current_chromosome = chromosome
 
-    def run_neighborhood_search(self, neighborhood_search, chromosome: ndarray, fitness: float, customer_index_list: list) -> Tuple[ndarray, float]:
+    def run_neighborhood_search(self, neighborhood_search, chromosome: ndarray, fitness) -> Tuple[ndarray, float]:
         """
         Runs each neighbor method according to the neighbor exploration of 5% and picks the best solution
         """
 
-        best_candidate = chromosome
+        best_chromosome = chromosome
         best_fitness = fitness
 
         # Run neighborhood search
         for _ in range(self.neighborhood_iterations):
-            chromosome_candidate = neighborhood_search(chromosome, customer_index_list)
-            p_complete = self.ga.split.split(chromosome_candidate)[0]
-            zero_indices = np.where(p_complete == 0)[0]
-            selected_values = p_complete[np.concatenate([zero_indices - 1])]
-            chromosome_candidate_fitness = np.sum(selected_values)
+            chromosome_candidate = neighborhood_search(chromosome, self.customer_index_list)
+            fitness_candidate = self.ga.decode_chromosome(chromosome_candidate)[0]
 
             # Update the best candidate and best fitness if needed
-            if chromosome_candidate_fitness < best_fitness:
-                best_candidate = chromosome_candidate
-                best_fitness = chromosome_candidate_fitness
+            if fitness_candidate < best_fitness:
+                best_chromosome = chromosome_candidate
+                best_fitness = fitness_candidate
 
-        return best_candidate, best_fitness
+        return best_chromosome, best_fitness
 
     def n1_swap_and_relocate(self, chromosome, customer_index_list) -> ndarray:
         """
@@ -315,7 +315,8 @@ class Education:
         depot1, depot2 = np.random.choice(self.ga.vrp_instance.n_depots, size=2, replace=replace)
         return min(depot1, depot2), max(depot1, depot2)
 
-    def _determine_start_and_end_depot_position(self, depot_i: int, chromosome: ndarray, customer_index_list: list) -> Tuple[int, int]:
+    def _determine_start_and_end_depot_position(self, depot_i: int, chromosome: ndarray, customer_index_list: list) -> \
+    Tuple[int, int]:
         start_depot = customer_index_list[depot_i]
         if depot_i == self.ga.vrp_instance.n_depots - 1:
             end_depot = len(chromosome) - 1

@@ -141,7 +141,7 @@ class Split:
                     duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                     cost = distance \
                            + self.ga.duration_penalty_factor * max(0,
-                                                                   duration - self.ga.vrp_instance.max_duration_of_a_route) \
+                                                                   duration + distance_to_depot - self.ga.vrp_instance.max_duration_of_a_route) \
                            + self.ga.capacity_penalty_factor * max(0,
                                                                    current_capacity - self.ga.vrp_instance.max_capacity) \
                            + self.ga.time_window_penalty * sum_time_warp

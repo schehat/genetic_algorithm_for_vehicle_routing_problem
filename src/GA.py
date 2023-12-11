@@ -63,7 +63,7 @@ class GA:
                  p_education: float = 0.0,
 
                  p_adaptive_step: float = 0.1,
-                 penalty_step: int = 50,
+                 penalty_step: int = 25,
                  survivor_selection_step: int = 25,
                  p_selection_survival: float = 0.5,
                  p_diversify_step: float = 0.2,
@@ -265,9 +265,10 @@ class GA:
             infeasible_individuals = self.population[~condition]
             if len(top_feasible_individuals) < self.n_elite:
                 top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite]
+                top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
             else:
                 top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite // 2]
-            top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
+                top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             self.selection_method(self.population, self.tournament_size)
             self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
@@ -285,6 +286,15 @@ class GA:
             # Replace old generation with new generation
             self.population["chromosome"] = self.children
             self.do_elitism(top_infeasible_individuals)
+            # for c, i in enumerate(top_feasible_individuals):
+            #     old_fitness = i["fitness"]
+            #     old_chromosome = i["chromosome"]
+            #     i["chromosome"], i["fitness"] = self.education.run(i["chromosome"], i["fitness"])
+            #     total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(i["chromosome"])
+            #     if total_capacity_violation != 0 or total_time_warp != 0 or total_duration_violation != 0:
+            #         i["fitness"] = old_fitness
+            #         i["chromosome"] = old_chromosome
+            #     print(f"old/new fitness {old_fitness}/{i['fitness']}")
             self.do_elitism(top_feasible_individuals)
 
             # self.fitness_scaling(self.population)
@@ -329,10 +339,11 @@ class GA:
             if self.no_improvement_counter >= self.threshold_no_improvement or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
 
-            if self.generation > 500:
-                self.p_swap = 0.32
-                self.p_inversion = 0.64
-                self.p_insertion = 0.96
+            if self.generation >= 800:
+                self.p_m = 0.5
+                # self.p_swap = 0.30
+                # self.p_inversion = 0.60
+                # self.p_insertion = 0.9
                 # self.p_education = 0.1
 
     def fitness_evaluation(self):
@@ -474,24 +485,24 @@ class GA:
                 # else:
                 # Generate 2 children by swapping parents in argument of crossover operation
 
-                if random() < 0.5:
-                    self.children[individual] = self.crossover.order_beginning(
-                        self.crossover.uniform(self.population[individual]["chromosome"],
-                                               self.population[individual + 1]["chromosome"]),
-                        self.population[individual + 1]["chromosome"])
+                # if random() < 0.5:
+                self.children[individual] = self.crossover.order_beginning(
+                    self.crossover.uniform(self.population[individual]["chromosome"],
+                                           self.population[individual + 1]["chromosome"]),
+                    self.population[individual + 1]["chromosome"])
 
-                    self.children[individual + 1] = self.crossover.order_beginning(
-                        self.crossover.uniform(self.population[individual + 1]["chromosome"],
-                                               self.population[individual]["chromosome"]),
-                        self.population[individual]["chromosome"])
-                else:
-                    self.children[individual] = self.crossover.order_beginning(
-                        self.population[individual]["chromosome"],
-                        self.population[individual + 1]["chromosome"])
-
-                    self.children[individual + 1] = self.crossover.order_beginning(
-                        self.population[individual + 1]["chromosome"],
-                        self.population[individual]["chromosome"])
+                self.children[individual + 1] = self.crossover.order_beginning(
+                    self.crossover.uniform(self.population[individual + 1]["chromosome"],
+                                           self.population[individual]["chromosome"]),
+                    self.population[individual]["chromosome"])
+                # else:
+                #     self.children[individual] = self.crossover.order_beginning(
+                #         self.population[individual]["chromosome"],
+                #         self.population[individual + 1]["chromosome"])
+                #
+                #     self.children[individual + 1] = self.crossover.order_beginning(
+                #         self.population[individual + 1]["chromosome"],
+                #         self.population[individual]["chromosome"])
             else:
                 self.children[individual] = self.population[individual]["chromosome"]
                 self.children[individual + 1] = self.population[individual + 1]["chromosome"]
@@ -574,8 +585,8 @@ class GA:
 
             # if random() < self.p_education:
             #     try:
-            #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome,
-            #                                                                              self.population[i]["fitness"])
+            #         current_fitness = float(self.decode_chromosome(chromosome)[0])
+            #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, current_fitness)
             #     except:
             #         print("Education Error")
 

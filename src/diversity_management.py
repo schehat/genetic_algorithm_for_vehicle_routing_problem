@@ -86,9 +86,9 @@ class DiversityManagement:
         clones = sorted(clones, key=lambda x: x["biased_fitness"])
         unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
         # List of individuals sorted by biased_fitness, clones at the end
-        unique_individuals.extend(clones)
+        # unique_individuals.extend(clones)
 
-        num_to_keep = int(self.ga.p_selection_survival * len(self.ga.population))
+        num_to_keep = min(len(unique_individuals), int(self.ga.p_selection_survival * len(self.ga.population)))
         # ga.population will be replaced with random individuals
         initial_population_random(self.ga, num_to_keep, self.ga.population_size)
 
