@@ -13,7 +13,7 @@ from src.distance_measurement import euclidean_distance
 from src.diversity_management import DiversityManagement
 from src.education import Education
 from src.initial_population import initial_population_random
-from src.local_search import two_opt_single, two_opt_random
+from src.local_search import two_opt_single, two_opt_random, two_opt
 from src.split import Split
 from vrp import Customer, Depot, VRPInstance
 from crossover import Crossover
@@ -39,7 +39,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 3
+    MAX_RUNNING_TIME_IN_S = 3600 * 1
     start_time = None
     end_time = None
     children = None
@@ -58,7 +58,7 @@ class GA:
                  tournament_size_increment: int = 1,
                  n_elite: int = 10,
                  elite_increment: int = 1,
-                 p_c: float = 0.9,
+                 p_c: float = 1.0,
                  p_m: float = 0.3,
                  p_education: float = 0.0,
 
@@ -167,6 +167,10 @@ class GA:
         self.old_population_size = self.population_size
         self.old_n_elite = self.n_elite
 
+        self.p_swap = 0.33
+        self.p_inversion = 0.66
+        self.p_insertion = 1.0
+
     def run(self):
         """
         Execution of FISAGALS
@@ -186,7 +190,7 @@ class GA:
         # population_fitness_sorted_i = np.argsort(self.population["fitness"])[:self.population_size]
         # self.population = self.population[population_fitness_sorted_i]
         # self.n_elite = 7
-        # self.p_education = 0.4
+        # self.p_education = 0.5
         # self.survivor_selection_step = 5
         # # With education
         # self.run_generations(self.generation, self.generation + 50)
@@ -199,11 +203,11 @@ class GA:
         top_feasible_individuals_i = np.argsort(feasible_individuals["fitness"])[:10]
         top_feasible_individuals = feasible_individuals[top_feasible_individuals_i]
 
-        for individual in top_feasible_individuals:
-            two_opt_random(self, individual)
-            print(individual)
-            if individual["fitness"] + 0.0000001 < self.best_solution["fitness"]:
-                self.best_solution = individual.copy()
+        # for individual in top_feasible_individuals:
+        #     two_opt_random(self, individual)
+        #     print(individual)
+        #     if individual["fitness"] + 0.0000001 < self.best_solution["fitness"]:
+        #         self.best_solution = individual.copy()
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution['fitness']}")
         self.local_search_method(self, self.best_solution)
@@ -262,7 +266,7 @@ class GA:
             if len(top_feasible_individuals) < self.n_elite:
                 top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite]
             else:
-                top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite//2]
+                top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite // 2]
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             self.selection_method(self.population, self.tournament_size)
@@ -324,6 +328,12 @@ class GA:
             # Termination convergence criteria of GA
             if self.no_improvement_counter >= self.threshold_no_improvement or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
                 break
+
+            if self.generation > 500:
+                self.p_swap = 0.32
+                self.p_inversion = 0.64
+                self.p_insertion = 0.96
+                # self.p_education = 0.1
 
     def fitness_evaluation(self):
         for i, chromosome in enumerate(self.population["chromosome"]):
@@ -451,18 +461,30 @@ class GA:
             # self.do_adaptive_crossover_and_mutation_rate(individual)
 
             if random() <= self.p_c:
-                if random() < self.p_education / 2:
-                    self.children[individual], self.population[individual][
-                        "fitness"] = self.crossover.periodic_crossover_with_insertions(
-                        self.population[individual]["chromosome"],
-                        self.population[individual + 1]["chromosome"], self, self.population[individual]["fitness"])
+                # if random() < self.p_education / 2:
+                #     self.children[individual], self.population[individual][
+                #         "fitness"] = self.crossover.periodic_crossover_with_insertions(
+                #         self.population[individual]["chromosome"],
+                #         self.population[individual + 1]["chromosome"], self, self.population[individual]["fitness"])
+                #
+                #     self.children[individual + 1], self.population[individual + 1][
+                #         "fitness"] = self.crossover.periodic_crossover_with_insertions(
+                #         self.population[individual + 1]["chromosome"],
+                #         self.population[individual]["chromosome"], self, self.population[individual + 1]["fitness"])
+                # else:
+                # Generate 2 children by swapping parents in argument of crossover operation
 
-                    self.children[individual + 1], self.population[individual + 1][
-                        "fitness"] = self.crossover.periodic_crossover_with_insertions(
-                        self.population[individual + 1]["chromosome"],
-                        self.population[individual]["chromosome"], self, self.population[individual + 1]["fitness"])
+                if random() < 0.5:
+                    self.children[individual] = self.crossover.order_beginning(
+                        self.crossover.uniform(self.population[individual]["chromosome"],
+                                               self.population[individual + 1]["chromosome"]),
+                        self.population[individual + 1]["chromosome"])
+
+                    self.children[individual + 1] = self.crossover.order_beginning(
+                        self.crossover.uniform(self.population[individual + 1]["chromosome"],
+                                               self.population[individual]["chromosome"]),
+                        self.population[individual]["chromosome"])
                 else:
-                    # Generate 2 children by swapping parents in argument of crossover operation
                     self.children[individual] = self.crossover.order_beginning(
                         self.population[individual]["chromosome"],
                         self.population[individual + 1]["chromosome"])
@@ -535,26 +557,27 @@ class GA:
         """
         for i, chromosome in enumerate(self.children):
             if random() <= self.p_m:
-                if random() < 0.5:
-                    self.mutation.uniform(self.children[i])
+                # if random() < 0.5:
+                self.mutation.uniform(self.children[i])
 
                 rand_num = random()
-                if rand_num < 0.33:
+                if rand_num < self.p_swap:
                     self.mutation.swap(self.children[i])
-                elif 0.33 <= rand_num < 0.66:
+                elif self.p_swap <= rand_num < self.p_inversion:
                     self.mutation.inversion(self.children[i])
-                elif 0.66 <= rand_num <= 1.0:
+                elif self.p_inversion <= rand_num <= self.p_insertion:
                     self.mutation.insertion(self.children[i])
+                else:
+                    self.population[i]["chromosome"] = self.children[i]
+                    two_opt(self, self.population[i])
+                    self.children[i] = self.population[i]["chromosome"]
 
-            if random() < self.p_education:
-                try:
-                    self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, self.population[i]["fitness"])
-                except:
-                    print("Education Error")
-                # else:
-                #     self.population[i]["chromosome"] = self.children[i]
-                #     two_opt_single(self, self.population[i])
-                #     self.children[i] = self.population[i]["chromosome"]
+            # if random() < self.p_education:
+            #     try:
+            #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome,
+            #                                                                              self.population[i]["fitness"])
+            #     except:
+            #         print("Education Error")
 
     def do_elitism(self, top_individuals: ndarray) -> None:
         """
@@ -651,7 +674,7 @@ class GA:
                        f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'
                        f'\ncapacity_penalty_factor: {self.capacity_penalty_factor}, duration_penalty_factor {self.duration_penalty_factor}, time_window_penalty: {self.time_window_penalty}'
                        f'\nBest fitness before/after local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])} / {individual["fitness"]}'
-                       f'\nBest individual found: {individual}'                       
+                       f'\nBest individual found: {individual}'
                        f'\nTop individuals\n\n: {top_individuals}'
                        f'\n\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\n\nFitness stats avg: {self.fitness_stats["avg"][:self.generation + 1]} '

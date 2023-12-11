@@ -20,23 +20,30 @@ class Mutation:
         self.END_SECOND_PART = self.vrp_instance.n_depots + vrp_instance.n_customers
         self.minimum_serving_customers_per_vehicle = minimum_serving_customers_per_vehicle
 
+        MIN_CUSTOMER = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
+        MAX_CUSTOMER = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
+
     def uniform(self, chromosome: np.ndarray):
         """
         Applying uniform mutation to first part of chromosome in place
         param: chromosome 1D array
         """
 
-        # Define the range for mutated number of customers. TODO: is ok?
+        # # Define the range for mutated number of customers. TODO: is ok?
         min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
         max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
+        #
+        # # Iterate through the vehicles and apply uniform mutation
+        # for i in range(self.vrp_instance.n_depots):
+        #     if random() <= self.P_UNIFORM:
+        #         mutated_value = np.random.randint(min_customer, max_customer + 1)
+        #         chromosome[i] = mutated_value
+        #
+        # self._repair_procedure(chromosome)
 
-        # Iterate through the vehicles and apply uniform mutation
-        for i in range(self.vrp_instance.n_depots):
-            if random() <= self.P_UNIFORM:
-                mutated_value = np.random.randint(min_customer, max_customer + 1)
-                chromosome[i] = mutated_value
-
-        self._repair_procedure(chromosome)
+        depot1, depot2 = np.random.choice(self.vrp_instance.n_depots, size=2, replace=False)
+        chromosome[depot1] = min(max_customer, chromosome[depot1] + 1)
+        chromosome[depot1] = max(min_customer, chromosome[depot1] - 1)
 
     def _repair_procedure(self, chromosome: np.ndarray):
         """

@@ -31,7 +31,30 @@ class Crossover:
             if random() <= self.UNIFORM_RATE:
                 child[i] = parent2[i]
 
+        self._repair_procedure(child)
+
         return child
+
+    def _repair_procedure(self, chromosome: np.ndarray):
+        """
+        After uniform mutation first part of chromosome may break and repair procedure needed
+        param: chromosome - 1D array
+        """
+
+        # iterate through depots
+        sum_customers = np.sum(chromosome[:self.vrp_instance.n_depots])
+        diff = sum_customers - self.vrp_instance.n_customers
+
+        while diff != 0:
+            random_index = np.random.randint(self.vrp_instance.n_depots)
+
+            if diff > 0:
+                if chromosome[random_index] > 1:
+                    chromosome[random_index] -= 1
+                    diff -= 1
+            else:
+                chromosome[random_index] += 1
+                diff += 1
 
     def order_beginning(self, parent1: np.ndarray, parent2: np.ndarray) -> np.ndarray:
         """

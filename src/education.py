@@ -15,7 +15,7 @@ class Education:
     def __init__(self, ga: "GA", max_visit_sequence: int = 3):
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
-        self.neighborhood_iterations = 5
+        self.neighborhood_iterations = 3
 
     def run(self, chromosome: ndarray, current_fitness: float) -> Tuple[ndarray, float]:
         """
@@ -96,7 +96,7 @@ class Education:
             # Starting from 1 to exclude depot and until len + 1 to add as last element
             shuffle_insertion = list(range(1, len(single_depot_chromosome) + 1))
             shuffle(shuffle_insertion)
-            for insert_position in shuffle_insertion: #[:max_depot_iterations]:
+            for insert_position in shuffle_insertion[:max_depot_iterations]:
                 # Insert the customer at the specified position
                 single_depot_chromosome.insert(insert_position, customer)
 
@@ -108,12 +108,12 @@ class Education:
                 if fitness < best_fitness:
                     best_fitness = fitness
                     best_insert_position = insert_position
-                    # n_improvements += 1
+                    n_improvements += 1
 
                 # Remove the customer for the next iteration
                 single_depot_chromosome.pop(insert_position)
-                # if n_improvements >= max_improvements:
-                #     break
+                if n_improvements >= max_improvements:
+                    break
 
             if best_insert_position is not None:
                 single_depot_chromosome.insert(best_insert_position, customer)
