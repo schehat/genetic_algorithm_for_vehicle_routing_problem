@@ -83,12 +83,41 @@ class DiversityManagement:
             else:
                 clones.append(individual.copy())
 
-        clones = sorted(clones, key=lambda x: x["biased_fitness"])
+        # clones = sorted(clones, key=lambda x: x["biased_fitness"])
         unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
         # List of individuals sorted by biased_fitness, clones at the end
         # unique_individuals.extend(clones)
 
         num_to_keep = min(len(unique_individuals), int(self.ga.p_selection_survival * len(self.ga.population)))
+        # ga.population will be replaced with random individuals
+        initial_population_random(self.ga, num_to_keep, self.ga.population_size)
+
+        # Keep certain percentage of current generation individuals. Clones will be removed first then the rest according to there biased fitness
+        self.ga.population[:num_to_keep] = np.array(unique_individuals[:num_to_keep], dtype=self.ga.population.dtype)
+
+        # Fitness evaluation updating for the randoms
+        self.ga.fitness_evaluation()
+        self.calculate_biased_fitness()
+
+    def kill_clones(self):
+        print("KILL CLONES")
+        unique_fitness = set()
+        unique_individuals = []
+        clones = []
+
+        for individual in self.ga.population:
+            fitness_value = individual["fitness"]
+            diversity_contribution = individual["diversity_contribution"]
+
+            if diversity_contribution != 0 and fitness_value not in unique_fitness:
+                unique_individuals.append(individual)
+                unique_fitness.add(fitness_value)
+            else:
+                clones.append(individual.copy())
+
+        unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
+
+        num_to_keep = len(unique_individuals)
         # ga.population will be replaced with random individuals
         initial_population_random(self.ga, num_to_keep, self.ga.population_size)
 

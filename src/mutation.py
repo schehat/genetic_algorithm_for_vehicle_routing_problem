@@ -29,7 +29,7 @@ class Mutation:
         param: chromosome 1D array
         """
 
-        # # Define the range for mutated number of customers. TODO: is ok?
+        # Define the range for mutated number of customers. TODO: is ok?
         min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
         max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
         #

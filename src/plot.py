@@ -20,6 +20,7 @@ class Plot:
         self.ga = ga
         self.width = width
         self.height = height
+        self.file_prefix_name = f"../BA_results/{self.ga.instance_name}"
 
     def plot_fitness(self):
         """
@@ -33,26 +34,26 @@ class Plot:
         avg_fitness = self.ga.fitness_stats["avg"]
 
         # Plot data points at interval
-        self.interval = math.ceil(self.ga.generation * 0.05) if math.ceil(self.ga.generation * 0.05) > 0 else 1
+        self.interval = math.floor(self.ga.generation * 0.05) if math.ceil(self.ga.generation * 0.05) > 0 else 1
         x_intervals = np.arange(self.ga.max_generations)[0:self.ga.generation+1:self.interval]
         min_fitness_intervals = min_fitness[0:self.ga.generation+1:self.interval]
-        avg_fitness_intervals = avg_fitness[0:self.ga.generation+1:self.interval]
+        # avg_fitness_intervals = avg_fitness[0:self.ga.generation+1:self.interval]
 
         # Last element might not include self.ga.generation data points, if not add them
         if x_intervals[-1] != self.ga.generation:
             x_intervals = np.append(x_intervals, self.ga.generation)
             min_fitness_intervals = np.append(min_fitness_intervals, min_fitness[self.ga.generation])
-            avg_fitness_intervals = np.append(avg_fitness_intervals, avg_fitness[self.ga.generation])
+            # avg_fitness_intervals = np.append(avg_fitness_intervals, avg_fitness[self.ga.generation])
 
         plt.plot(x_intervals, min_fitness_intervals, marker='o', label='Min Fitness')
-        plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
+        # plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
 
         plt.xlabel('Generation')
         plt.ylabel('Fitness')
         plt.title('Fitness over Generations')
         plt.grid(True)
         plt.legend()
-        self.save_plot(f"../results/{self.ga.__class__.__name__}/{self.ga.TIMESTAMP}", f"fitness")
+        self.save_plot(f"{self.file_prefix_name}/{self.ga.TIMESTAMP}", f"fitness")
         plt.show()
 
     def plot_routes(self, individual: ndarray, width=12, height=10):
@@ -74,7 +75,7 @@ class Plot:
             plt.title(f'Depot Route Visualization {depot_i + 1}')
             plt.grid(True)
             plt.legend()
-            self.save_plot(f"../results/{self.ga.__class__.__name__}/{self.ga.TIMESTAMP}", f"depot_route{depot_i + 1}")
+            self.save_plot(f"{self.file_prefix_name}/{self.ga.TIMESTAMP}", f"depot_route{depot_i + 1}")
             plt.show()
 
         # Plot for every vehicle it routes
@@ -87,9 +88,9 @@ class Plot:
         plt.xlabel('X Coordinate')
         plt.ylabel('Y Coordinate')
         plt.title(f'Depot Route Visualization Complete')
-        # plt.grid(True)
+        plt.grid(True)
         plt.legend()
-        self.save_plot(f"../results/{self.ga.__class__.__name__}/{self.ga.TIMESTAMP}", f"depot_complete_routes")
+        self.save_plot(f"{self.file_prefix_name}/{self.ga.TIMESTAMP}", f"depot_complete_routes")
         plt.show()
 
     def _plot_depots(self):
@@ -121,13 +122,13 @@ class Plot:
                 start = j
 
         # Add customer ids and order of iteration as labels to the plot
-        # for j in range(len(x_pos)):
-        #     plt.text(x_pos[j], y_pos[j], customer_ids[j], fontsize=8, ha='right')
-        #     if j < len(x_pos) - 1:
-        #         mid_x = (x_pos[j] + x_pos[j + 1]) / 2
-        #         mid_y = (y_pos[j] + y_pos[j + 1]) / 2
-        #         plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
-        #                  bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
+        for j in range(len(x_pos)):
+            plt.text(x_pos[j], y_pos[j], customer_ids[j], fontsize=8, ha='right')
+            if j < len(x_pos) - 1:
+                mid_x = (x_pos[j] + x_pos[j + 1]) / 2
+                mid_y = (y_pos[j] + y_pos[j + 1]) / 2
+                plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
+                         bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
 
     @staticmethod
     def save_plot(location: str, file_name: str):

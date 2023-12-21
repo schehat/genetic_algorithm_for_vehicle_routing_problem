@@ -1,7 +1,7 @@
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from random import random
+from random import random, shuffle
 from typing import Callable, Tuple
 
 import numpy as np
@@ -30,16 +30,13 @@ class GA:
         E.g. for 2 depots and 7 customers (5, 2, 1, 2, 3, 4, 5, 6, 7)
         => first depot (index 0) has 5 customers, serving customers 1 - 5
         => second depot (Index 1) has 2 customers, serving customer 6 and 7
-        TODO: MIX BETWEEN RANDOM AND LOCAL SEARCH? BIG POPULATION AND RANDOM THEN CUT AND HARD LOCAL SEARCH. SWITCH
-        TODO: BETWEEN SYNCHRONOUS AND PARALLEL CROSSOVER. STRAFEN AUCH ERHÖHEN NACH GENERATIONSZAHL
-        TODO: Incorparate pattern improvement in normal mutation
     """
 
     TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 1
+    MAX_RUNNING_TIME_IN_S = 3600*1.5
     start_time = None
     end_time = None
     children = None
@@ -53,26 +50,23 @@ class GA:
                  selection_method: Callable[[ndarray, int], ndarray],
                  local_search_method,
                  distance_method,
+                 instance_name,
 
                  tournament_size: int = 2,
-                 tournament_size_increment: int = 1,
-                 n_elite: int = 10,
-                 elite_increment: int = 1,
+                 n_elite: int = 8,
                  p_c: float = 1.0,
                  p_m: float = 0.3,
-                 p_education: float = 0.0,
+                 p_education: float = 0.1,
 
-                 p_adaptive_step: float = 0.1,
-                 penalty_step: int = 25,
-                 survivor_selection_step: int = 25,
+                 penalty_step: int = 2,
+                 survivor_selection_step: int = 3,
                  p_selection_survival: float = 0.5,
-                 p_diversify_step: float = 0.2,
+                 diversify_step: float = 10,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
-                 diversity_weight: float = 0.7,
-                 capacity_penalty_factor: float = 10.0,
-                 duration_penalty_factor: float = 5.0,
+                 diversity_weight: float = 0.5,
+                 duration_penalty_factor: float = 8.0,
                  time_window_penalty: float = 5.0,
                  penalty_factor: float = 0.05,
 
@@ -83,6 +77,7 @@ class GA:
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
+        self.instance_name = instance_name
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -94,28 +89,22 @@ class GA:
         self.local_search_method = local_search_method
 
         self.tournament_size = tournament_size
-        self.tournament_size_increment = tournament_size_increment
         self.n_elite = n_elite
-        self.elite_increment = elite_increment
         self.p_c = p_c
         self.p_m = p_m
         self.p_education = p_education
-        # self.p_repair = 0.5
 
-        self.adaptive_step_size = p_adaptive_step * self.max_generations
         self.penalty_step = penalty_step
         self.survivor_selection_step = survivor_selection_step
         self.p_selection_survival = p_selection_survival
         self.threshold_no_improvement = int(0.5 * self.max_generations)
-        self.diversify_step = p_diversify_step
-        self.threshold_no_improvement_diversify = int(self.diversify_step * self.max_generations)
+        self.diversify_step = diversify_step
         self.p_diversify_survival = p_diversify_survival
 
         self.n_closest_neighbors = n_closest_neighbors
         self.diversity_weight = diversity_weight
         self.distance_method = distance_method
 
-        # TODO: ADAPTIVE
         # Calculate average distance between two customers
         customer_positions = np.array([[customer.x, customer.y] for customer in self.vrp_instance.customers])
         differences = customer_positions[:, np.newaxis, :] - customer_positions[np.newaxis, :, :]
@@ -158,10 +147,11 @@ class GA:
         self.feasible_population = np.zeros(0, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
-        self.fitness_stats = np.zeros(max_generations + 50,
+        self.fitness_stats = np.zeros(max_generations,
                                       dtype=np.dtype([("max", float), ("avg", float), ("min", float),
                                                       ("max_scaled", float), ("avg_scaled", float),
                                                       ("min_scaled", float)]))
+        self.feasible_stats = np.zeros(max_generations, dtype=np.dtype([("feasible", float), ("infeasible", float)]))
         self.route_data = []
 
         self.old_population_size = self.population_size
@@ -184,30 +174,15 @@ class GA:
         # Main GA loop
         self.run_generations(self.generation, self.max_generations)
 
-        # self.no_improvement_counter = 0
-        # self.population_size = 50
-        # self.target_feasible_proportion = self.population_size / 2
-        # population_fitness_sorted_i = np.argsort(self.population["fitness"])[:self.population_size]
-        # self.population = self.population[population_fitness_sorted_i]
-        # self.n_elite = 7
-        # self.p_education = 0.5
-        # self.survivor_selection_step = 5
-        # # With education
-        # self.run_generations(self.generation, self.generation + 50)
-
-        condition = (self.population["capacity_violation"] == 0) & (
-                self.population["time_warp"] == 0) & (
-                            self.population["duration_violation"] == 0)
+        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (self.population["duration_violation"] == 0)
 
         feasible_individuals = self.population[condition]
-        top_feasible_individuals_i = np.argsort(feasible_individuals["fitness"])[:10]
-        top_feasible_individuals = feasible_individuals[top_feasible_individuals_i]
-
-        # for individual in top_feasible_individuals:
-        #     two_opt_random(self, individual)
-        #     print(individual)
-        #     if individual["fitness"] + 0.0000001 < self.best_solution["fitness"]:
-        #         self.best_solution = individual.copy()
+        best_feasible_solution = None
+        if len(feasible_individuals) > 0:
+            top_feasible_individual_i = np.argsort(feasible_individuals["fitness"])[0]
+            top_feasible_individual = feasible_individuals[top_feasible_individual_i]
+            best_feasible_solution = top_feasible_individual.copy()
+            self.best_solution = top_feasible_individual.copy()
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution['fitness']}")
         self.local_search_method(self, self.best_solution)
@@ -216,13 +191,12 @@ class GA:
         # Need to decode again to log chromosome correctly after local search
         self.decode_chromosome(self.best_solution["chromosome"])
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
-
-        if self.fitness_stats[self.generation]["min"] >= self.best_solution["fitness"]:
-            self.fitness_stats[self.generation]["min"] = self.best_solution["fitness"]
+        print(f"best feasible: {best_feasible_solution}")
+        self.fitness_stats[self.generation+1]["min"] = self.best_solution["fitness"]
 
         self.plotter.plot_fitness()
         self.plotter.plot_routes(self.best_solution["chromosome"])
-        self.log_configuration(self.best_solution, top_feasible_individuals)
+        self.log_configuration(self.best_solution, best_feasible_solution)
 
         # BELOW TESTING
         #
@@ -253,9 +227,7 @@ class GA:
         self.max_generations = max_generation
         for self.generation in range(self.generation, self.max_generations):
             # Before starting the parent selection. Save percentage of best individuals
-            condition = (self.population["capacity_violation"] == 0) & (
-                    self.population["time_warp"] == 0) & (
-                                self.population["duration_violation"] == 0)
+            condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (self.population["duration_violation"] == 0)
 
             feasible_individuals = self.population[condition]
             top_feasible_individuals_i = np.argsort(feasible_individuals["fitness"])[:self.n_elite]
@@ -271,43 +243,30 @@ class GA:
                 top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             self.selection_method(self.population, self.tournament_size)
-            self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
-                                     dtype=int)
+            self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers), dtype=int)
 
-            # self.print_time_and_text("Before Crossover")
             self.do_crossover()
-            # self.print_time_and_text("After Crossover")
-            # self.population["chromosome"] = self.children
-            # self.fitness_evaluation()
-
             self.do_mutation()
-            # self.print_time_and_text("After Education")
 
             # Replace old generation with new generation
             self.population["chromosome"] = self.children
+
+            self.education_best_individuals(top_feasible_individuals, top_infeasible_individuals)
             self.do_elitism(top_infeasible_individuals)
-            # for c, i in enumerate(top_feasible_individuals):
-            #     old_fitness = i["fitness"]
-            #     old_chromosome = i["chromosome"]
-            #     i["chromosome"], i["fitness"] = self.education.run(i["chromosome"], i["fitness"])
-            #     total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(i["chromosome"])
-            #     if total_capacity_violation != 0 or total_time_warp != 0 or total_duration_violation != 0:
-            #         i["fitness"] = old_fitness
-            #         i["chromosome"] = old_chromosome
-            #     print(f"old/new fitness {old_fitness}/{i['fitness']}")
             self.do_elitism(top_feasible_individuals)
 
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
-            # self.insert_into_feasible_population()
             self.diversity_management.calculate_biased_fitness()
             self.save_fitness_statistics()
+            self.save_feasible_stats()
 
             self.adjust_penalty()
 
-            # if (self.generation + 1) % self.adaptive_step_size == 0:
-            #     self.tournament_size += self.tournament_size_increment
-            #     self.n_elite += self.elite_increment
+            if (self.generation + 1) % self.survivor_selection_step == 0:
+                self.diversity_management.survivor_selection()
+                self.do_elitism(top_infeasible_individuals)
+                self.do_elitism(top_feasible_individuals)
 
             # Track number of no improvements
             min_current_fitness = self.fitness_stats[self.generation]["min"]
@@ -319,32 +278,23 @@ class GA:
                 self.diversify_counter = 0
                 self.best_solution = self.population[np.argmin(self.population["fitness"])].copy()
 
-            if (self.generation + 1) % self.survivor_selection_step == 0:
-                self.diversity_management.survivor_selection()
-                self.do_elitism(top_infeasible_individuals)
-                self.do_elitism(top_feasible_individuals)
-
             # Diversify population
-            if self.diversify_counter >= self.threshold_no_improvement_diversify:
+            if self.diversify_counter >= self.diversify_step:
                 self.diversity_management.diversity_procedure()
                 self.do_elitism(top_infeasible_individuals)
                 self.do_elitism(top_feasible_individuals)
 
+            # Every iteration except if survivor selector was run then kill clones unnecessary
+            if (self.generation + 1) % self.survivor_selection_step == 0:
+                self.diversity_management.kill_clones()
+
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
-            print(
-                f"Generation: {self.generation + 1}, n_feasible/infeasible: {self.n_feasible}/{self.population_size - self.n_feasible} Min/AVG Fitness: {self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
+            print(f"Generation: {self.generation + 1}, n_feasible/infeasible: {self.n_feasible}/{self.population_size - self.n_feasible} Min/AVG Fitness: {self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Termination convergence criteria of GA
-            if self.no_improvement_counter >= self.threshold_no_improvement or self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:
+            if self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:  # or self.no_improvement_counter >= self.threshold_no_improvement:
                 break
-
-            if self.generation >= 800:
-                self.p_m = 0.5
-                # self.p_swap = 0.30
-                # self.p_inversion = 0.60
-                # self.p_insertion = 0.9
-                # self.p_education = 0.1
 
     def fitness_evaluation(self):
         for i, chromosome in enumerate(self.population["chromosome"]):
@@ -485,7 +435,6 @@ class GA:
                 # else:
                 # Generate 2 children by swapping parents in argument of crossover operation
 
-                # if random() < 0.5:
                 self.children[individual] = self.crossover.order_beginning(
                     self.crossover.uniform(self.population[individual]["chromosome"],
                                            self.population[individual + 1]["chromosome"]),
@@ -495,50 +444,9 @@ class GA:
                     self.crossover.uniform(self.population[individual + 1]["chromosome"],
                                            self.population[individual]["chromosome"]),
                     self.population[individual]["chromosome"])
-                # else:
-                #     self.children[individual] = self.crossover.order_beginning(
-                #         self.population[individual]["chromosome"],
-                #         self.population[individual + 1]["chromosome"])
-                #
-                #     self.children[individual + 1] = self.crossover.order_beginning(
-                #         self.population[individual + 1]["chromosome"],
-                #         self.population[individual]["chromosome"])
             else:
                 self.children[individual] = self.population[individual]["chromosome"]
                 self.children[individual + 1] = self.population[individual + 1]["chromosome"]
-
-    def do_crossover_asynchronous(self, children: np.ndarray) -> np.ndarray:
-        """
-        Handles the crossover
-        param: children - empty 1D array
-        return: children - 1D array of the generation holding chromosome information
-        """
-
-        def crossover_for_individual(individual):
-            if random() <= self.p_c:
-                # Generate 2 children by swapping parents in the crossover operation
-                c, f = self.crossover.periodic_crossover_with_insertions(
-                    self.population[individual]["chromosome"],
-                    self.population[individual + 1]["chromosome"],
-                    self, self.population[individual]["fitness"])
-            else:
-                c = self.population[individual]["chromosome"]
-                f = self.population[individual]["fitness"]
-
-            return c, f
-
-        with ThreadPoolExecutor() as executor:
-            results = list(executor.map(crossover_for_individual, range(0, self.population_size, 2)))
-
-        # Unpack the results
-        for i, (child, fitness) in enumerate(results):
-            children[i * 2] = child
-            self.population[i * 2]["fitness"] = fitness
-
-            children[i * 2 + 1] = self.population[i * 2 + 1]["chromosome"]
-            self.population[i * 2 + 1]["fitness"] = self.population[i * 2 + 1]["fitness"]
-
-        return children
 
     def do_adaptive_crossover_and_mutation_rate(self, individual: int):
         # Adaptive rates for genetic operators
@@ -568,7 +476,6 @@ class GA:
         """
         for i, chromosome in enumerate(self.children):
             if random() <= self.p_m:
-                # if random() < 0.5:
                 self.mutation.uniform(self.children[i])
 
                 rand_num = random()
@@ -583,12 +490,92 @@ class GA:
                     two_opt(self, self.population[i])
                     self.children[i] = self.population[i]["chromosome"]
 
-            # if random() < self.p_education:
-            #     try:
-            #         current_fitness = float(self.decode_chromosome(chromosome)[0])
-            #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, current_fitness)
-            #     except:
-            #         print("Education Error")
+            if random() < self.p_education:
+                try:
+                    current_fitness = float(self.decode_chromosome(chromosome)[0])
+                    self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, current_fitness, limited=True)
+                except:
+                    print("Education Error")
+
+    def education_best_individuals(self, top_feasible_individuals, top_infeasible_individuals):
+        # number_of_local_search = len(top_feasible_individuals)
+        # max_num_local_search = 3
+        # if number_of_local_search > max_num_local_search:
+        #     number_of_local_search = max_num_local_search
+        # local_search_counter = 0
+        # for i in top_feasible_individuals[:number_of_local_search]:
+        #     local_search_counter += 1
+        #     new_chromosome, new_fitness = self.education.run(i["chromosome"], i["fitness"])
+        #     total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+        #     if total_capacity_violation != 0 or total_time_warp != 0 or total_duration_violation != 0:
+        #         top_infeasible_individuals[-local_search_counter]["fitness"] = new_fitness
+        #         top_infeasible_individuals[-local_search_counter]["chromosome"] = new_chromosome
+        #     else:
+        #         if total_fitness <= i["fitness"]:
+        #             i["fitness"] = new_fitness
+        #             i["chromosome"] = new_chromosome
+        #     # print(f"old/new fitness {i['fitness']}/{new_fitness}")
+        #
+        # for local_search_counter, i in enumerate(top_infeasible_individuals[:(max_num_local_search-local_search_counter)]):
+        #     # print(f"infeasible: before current fitness = {i['fitness']}")
+        #     new_chromosome, new_fitness = self.education.run(i["chromosome"], i["fitness"])
+        #     total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+        #     if total_fitness <= i["fitness"]:
+        #             i["fitness"] = new_fitness
+        #             i["chromosome"] = new_chromosome
+        #     # print(f"fitness after {i['fitness']} / DECODE:{total_fitness}")
+
+        if len(top_feasible_individuals) > 0:
+            i = top_feasible_individuals[0]
+            new_chromosome, new_fitness = self.education.run(i["chromosome"], i["fitness"])
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+            if total_capacity_violation != 0 or total_time_warp != 0 or total_duration_violation != 0:
+                top_infeasible_individuals[-1]["fitness"] = new_fitness
+                top_infeasible_individuals[-1]["chromosome"] = new_chromosome
+            else:
+                if total_fitness <= i["fitness"]:
+                    i["fitness"] = new_fitness
+                    i["chromosome"] = new_chromosome
+        else:
+            i = top_infeasible_individuals[0]
+            # print(f"infeasible: before current fitness = {i['fitness']}")
+            new_chromosome, new_fitness = self.education.run(i["chromosome"], i["fitness"])
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+            if total_fitness <= i["fitness"]:
+                i["fitness"] = new_fitness
+                i["chromosome"] = new_chromosome
+            # print(f"fitness after {i['fitness']} / DECODE:{total_fitness}")
+
+        population_indices = list(range(self.population_size))
+        shuffle(population_indices)
+
+        # Count educations ran, limit to 2
+        counter = 0
+        for i in population_indices:
+            individual = self.population[i]
+
+            # Same individuals skip
+            if individual["fitness"] == top_infeasible_individuals[0]["fitness"]:
+                continue
+
+            if len(top_feasible_individuals) > 0:
+                if individual["fitness"] == top_feasible_individuals[0]["fitness"]:
+                    continue
+
+            # print(f"RANDOM index: {i},  {individual}")
+            counter += 1
+            new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+            if total_fitness <= individual["fitness"]:
+                individual["fitness"] = new_fitness
+                individual["chromosome"] = new_chromosome
+
+            # self.population[i] = individual
+
+            # print(f"NEW RANDOM index: {i},  {individual}")
+
+            if counter >= 2:
+                break
 
     def do_elitism(self, top_individuals: ndarray) -> None:
         """
@@ -625,29 +612,6 @@ class GA:
                 self.duration_penalty_factor *= (1 - self.penalty_factor)
                 self.time_window_penalty *= (1 - self.penalty_factor)
 
-    def insert_into_feasible_population(self):
-        # Check conditions for constraint violations
-        condition = (self.population["capacity_violation"] == 0) & (
-                self.population["time_warp"] == 0) & (
-                            self.population["duration_violation"] == 0)
-
-        # Get the indices where the condition is true
-        feasible_indices = np.where(condition)[0]
-
-        if len(feasible_indices) != 0:
-            # Get the feasible individuals using the indices
-            feasible_individuals = self.population[feasible_indices]
-
-            if len(self.feasible_population) + len(feasible_indices) > self.population_size:
-                pass
-            # Append the feasible individuals to feasible population
-            self.feasible_population = np.append(self.feasible_population, feasible_individuals)
-
-            # Replace feasible individuals in infeasible population with random individuals
-            if len(self.feasible_population) > 0.5 * self.population_size:
-                for i in feasible_indices:
-                    initial_population_random(self, i, i + 1)
-
     def print_time_and_text(self, text: str):
         self.end_time = time.time()
         minutes, seconds = divmod(self.end_time - self.start_time, 60)
@@ -658,7 +622,11 @@ class GA:
         self.fitness_stats[self.generation]["avg"] = np.mean(self.population["fitness"])
         self.fitness_stats[self.generation]["min"] = np.min(self.population["fitness"])
 
-    def log_configuration(self, individual, top_individuals) -> None:
+    def save_feasible_stats(self):
+        self.feasible_stats[self.generation]["feasible"] = self.n_feasible
+        self.feasible_stats[self.generation]["infeasible"] = self.population_size - self.n_feasible
+
+    def log_configuration(self, individual, best_feasible_solution) -> None:
         """
         Logs every relevant parameter
         param: individual - the best solution found
@@ -668,7 +636,7 @@ class GA:
         sorted_indices = np.argsort(self.population["fitness"])
         self.population[:] = self.population[sorted_indices]
 
-        directory = f'../results/{self.__class__.__name__}/{self.TIMESTAMP}'
+        directory = f'../BA_results/{self.instance_name}/{self.TIMESTAMP}'
         if not os.path.exists(directory):
             os.makedirs(directory)
 
@@ -679,16 +647,16 @@ class GA:
                        f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
                        f'\np_c: {self.p_c}, p_m: {self.p_m}, NOT YET p_education: {self.p_education}'
                        f'\ntournament_size: {self.tournament_size}, n_elite: {self.old_n_elite}/{self.n_elite}'
-                       f'\nNOT YET adaptive_step_size: {self.adaptive_step_size}, tournament_size_increment: {self.tournament_size_increment}, elite_increment: {self.elite_increment}'
                        f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival} '
-                       f'\nthreshold_no_improvement_diversify: {self.threshold_no_improvement_diversify}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
+                       f'\ndiversify_step: {self.diversify_step}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
                        f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'
                        f'\ncapacity_penalty_factor: {self.capacity_penalty_factor}, duration_penalty_factor {self.duration_penalty_factor}, time_window_penalty: {self.time_window_penalty}'
                        f'\nBest fitness before/after local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])} / {individual["fitness"]}'
                        f'\nBest individual found: {individual}'
-                       f'\nTop individuals\n\n: {top_individuals}'
+                       f'\nBest feasible individual found: {best_feasible_solution}'
                        f'\n\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\n\nFitness stats avg: {self.fitness_stats["avg"][:self.generation + 1]} '
+                       f'\n\nFeasible stats: {self.fitness_stats["avg"][:self.generation + 1]} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '

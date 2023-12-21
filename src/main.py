@@ -53,14 +53,16 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_FILE_PATH = "../benchmark/c-mdvrptw/pr01"
+    INSTANCE_NAME = "pr02"
+    INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
+    # pr 01 200G, 02 900G, 03 500G
     # Set GA parameters
-    POPULATION_SIZE = 100
+    POPULATION_SIZE = 40
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 1000
+    MAX_GENERATIONS = 50
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
@@ -76,5 +78,6 @@ if __name__ == "__main__":
             FITNESS_SCALING,
             SELECTION_METHOD,
             LOCAL_SEARCH_METHOD,
-            DISTANCE_METHOD)
+            DISTANCE_METHOD,
+            INSTANCE_NAME)
     ga.run()

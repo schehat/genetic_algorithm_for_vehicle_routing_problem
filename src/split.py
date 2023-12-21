@@ -62,10 +62,12 @@ class Split:
 
         return np.array(p_complete), np.array(pred_complete), np.array(distance_complete), np.array(capacity_complete), np.array(time_complete), np.array(time_warp_complete), np.array(duration_complete)
 
-    def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int) -> Tuple[
+    def split_single_depot(self, chromosome: ndarray, depot_i: int, customer_offset: int, depot_i_vehicle=-1) -> Tuple[
         list, list, list, list, list, list, list]:
         depot_i_n_customers = chromosome[depot_i]
-        vehicle_i_depot: Depot = self.ga.vrp_instance.depots[depot_i]
+        if depot_i_vehicle == -1:
+            depot_i_vehicle = depot_i
+        vehicle_i_depot: Depot = self.ga.vrp_instance.depots[depot_i_vehicle]
 
         # Shortest path containing cost
         p1 = [float('inf') if i > 0 else 0 for i in range(depot_i_n_customers + 1)]
