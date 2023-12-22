@@ -59,18 +59,18 @@ class GA:
                  p_education: float = 0.1,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 3,
-                 p_selection_survival: float = 0.5,
+                 survivor_selection_step: int = 5,
+                 p_selection_survival: float = 0.7,
                  diversify_step: float = 10,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
                  diversity_weight: float = 0.5,
-                 duration_penalty_factor: float = 8.0,
+                 duration_penalty_factor: float = 6.0,
                  time_window_penalty: float = 5.0,
                  penalty_factor: float = 0.05,
 
-                 target_feasible_proportion: float = 0.5
+                 target_feasible_proportion: float = 0.33
                  ):
 
         self.vrp_instance: VRPInstance = vrp_instance
@@ -147,8 +147,8 @@ class GA:
         self.feasible_population = np.zeros(0, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
-        self.fitness_stats = np.zeros(max_generations,
-                                      dtype=np.dtype([("max", float), ("avg", float), ("min", float),
+        self.fitness_stats = np.zeros(max_generations + 1,
+                                      dtype=np.dtype([("max", float), ("avg", float), ("min", float), ("min_feasible", float),
                                                       ("max_scaled", float), ("avg_scaled", float),
                                                       ("min_scaled", float)]))
         self.feasible_stats = np.zeros(max_generations, dtype=np.dtype([("feasible", float), ("infeasible", float)]))
@@ -193,6 +193,10 @@ class GA:
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
         print(f"best feasible: {best_feasible_solution}")
         self.fitness_stats[self.generation+1]["min"] = self.best_solution["fitness"]
+        if self.best_solution["capacity_violation"] == 0 and self.best_solution["time_warp"] == 0 and self.best_solution["duration_violation"] == 0:
+            self.fitness_stats[self.generation+1]["min_feasible"] = self.best_solution["fitness"]
+        else:
+            self.fitness_stats[self.generation+1]["min_feasible"] = best_feasible_solution["fitness"]
 
         self.plotter.plot_fitness()
         self.plotter.plot_routes(self.best_solution["chromosome"])
@@ -285,12 +289,15 @@ class GA:
                 self.do_elitism(top_feasible_individuals)
 
             # Every iteration except if survivor selector was run then kill clones unnecessary
-            if (self.generation + 1) % self.survivor_selection_step == 0:
+            if not (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.kill_clones()
+            #     self.do_elitism(top_infeasible_individuals)
+            #     self.do_elitism(top_feasible_individuals)
 
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
-            print(f"Generation: {self.generation + 1}, n_feasible/infeasible: {self.n_feasible}/{self.population_size - self.n_feasible} Min/AVG Fitness: {self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
+            print(f"Generation: {self.generation + 1}, n_feasible/infeasible: {self.n_feasible}/{self.population_size - self.n_feasible} Min all/Min feasible/AVG Fitness: "
+                  f"{self.fitness_stats[self.generation]['min']}/{self.fitness_stats[self.generation]['min_feasible']}/{self.fitness_stats[self.generation]['avg']}, Time: {int(minutes)}:{int(seconds)}")
 
             # Termination convergence criteria of GA
             if self.end_time - self.start_time >= self.MAX_RUNNING_TIME_IN_S:  # or self.no_improvement_counter >= self.threshold_no_improvement:
@@ -533,7 +540,7 @@ class GA:
                 top_infeasible_individuals[-1]["fitness"] = new_fitness
                 top_infeasible_individuals[-1]["chromosome"] = new_chromosome
             else:
-                if total_fitness <= i["fitness"]:
+                if total_fitness < i["fitness"]:
                     i["fitness"] = new_fitness
                     i["chromosome"] = new_chromosome
         else:
@@ -541,7 +548,7 @@ class GA:
             # print(f"infeasible: before current fitness = {i['fitness']}")
             new_chromosome, new_fitness = self.education.run(i["chromosome"], i["fitness"])
             total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
-            if total_fitness <= i["fitness"]:
+            if total_fitness < i["fitness"]:
                 i["fitness"] = new_fitness
                 i["chromosome"] = new_chromosome
             # print(f"fitness after {i['fitness']} / DECODE:{total_fitness}")
@@ -570,8 +577,6 @@ class GA:
                 individual["fitness"] = new_fitness
                 individual["chromosome"] = new_chromosome
 
-            # self.population[i] = individual
-
             # print(f"NEW RANDOM index: {i},  {individual}")
 
             if counter >= 2:
@@ -592,6 +597,8 @@ class GA:
 
     def adjust_penalty(self):
         if (self.generation + 1) % self.penalty_step == 0:
+            temp = self.duration_penalty_factor
+
             # Check conditions for constraint violations
             condition = (self.population["capacity_violation"] == 0) & (
                     self.population["time_warp"] == 0) & (
@@ -602,15 +609,14 @@ class GA:
             self.n_feasible = len(feasible_indices)
 
             if self.n_feasible < self.target_feasible_proportion:
-                temp = self.duration_penalty_factor
                 self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 25)
                 self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 25)
-                print(temp, self.duration_penalty_factor)
                 self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 25)
             else:
                 self.capacity_penalty_factor *= (1 - self.penalty_factor)
                 self.duration_penalty_factor *= (1 - self.penalty_factor)
                 self.time_window_penalty *= (1 - self.penalty_factor)
+            print(temp, self.duration_penalty_factor)
 
     def print_time_and_text(self, text: str):
         self.end_time = time.time()
@@ -621,6 +627,15 @@ class GA:
         self.fitness_stats[self.generation]["max"] = np.max(self.population["fitness"])
         self.fitness_stats[self.generation]["avg"] = np.mean(self.population["fitness"])
         self.fitness_stats[self.generation]["min"] = np.min(self.population["fitness"])
+
+        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (self.population["duration_violation"] == 0)
+        feasible_individuals = self.population[condition]
+        if len(feasible_individuals) > 0:
+            top_feasible_individual_i = np.argsort(feasible_individuals["fitness"])[0]
+            top_feasible_individual = feasible_individuals[top_feasible_individual_i]
+            self.fitness_stats[self.generation]["min_feasible"] = top_feasible_individual["fitness"]
+        else:
+            self.fitness_stats[self.generation]["min_feasible"] = 0
 
     def save_feasible_stats(self):
         self.feasible_stats[self.generation]["feasible"] = self.n_feasible
@@ -655,6 +670,7 @@ class GA:
                        f'\nBest individual found: {individual}'
                        f'\nBest feasible individual found: {best_feasible_solution}'
                        f'\n\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
+                       f'\n\nFitness stats feasible min: {self.fitness_stats["min_feasible"][:self.generation + 1]} '
                        f'\n\nFitness stats avg: {self.fitness_stats["avg"][:self.generation + 1]} '
                        f'\n\nFeasible stats: {self.fitness_stats["avg"][:self.generation + 1]} '
                        f'\nSolution Description: '

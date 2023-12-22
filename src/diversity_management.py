@@ -29,7 +29,8 @@ class DiversityManagement:
 
         # Assign ranks to fitness_ranked and diversity_contribution_ranked. Start ranks from 1
         fitness_ranked[fitness_indexes] = np.arange(1, len(fitness_indexes) + 1)
-        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1, len(diversity_contribution_indexes) + 1)
+        diversity_contribution_ranked[diversity_contribution_indexes] = np.arange(1,
+                                                                                  len(diversity_contribution_indexes) + 1)
 
         # Now you can use fitness_ranked and diversity_contribution_ranked to calculate biased_fitness
         biased_fitness = fitness_ranked + self.ga.diversity_weight * diversity_contribution_ranked
@@ -75,9 +76,9 @@ class DiversityManagement:
 
         for individual in self.ga.population:
             fitness_value = individual["fitness"]
-            diversity_contribution = individual["diversity_contribution"]
+            # diversity_contribution = individual["diversity_contribution"]
 
-            if diversity_contribution != 0 and fitness_value not in unique_fitness:
+            if fitness_value not in unique_fitness:  # and diversity_contribution != 0:
                 unique_individuals.append(individual)
                 unique_fitness.add(fitness_value)
             else:
@@ -107,15 +108,15 @@ class DiversityManagement:
 
         for individual in self.ga.population:
             fitness_value = individual["fitness"]
-            diversity_contribution = individual["diversity_contribution"]
+            # diversity_contribution = individual["diversity_contribution"]
 
-            if diversity_contribution != 0 and fitness_value not in unique_fitness:
+            if fitness_value not in unique_fitness:  # and diversity_contribution != 0:
                 unique_individuals.append(individual)
                 unique_fitness.add(fitness_value)
             else:
                 clones.append(individual.copy())
 
-        unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
+        # unique_individuals = sorted(unique_individuals, key=lambda x: x["biased_fitness"])
 
         num_to_keep = len(unique_individuals)
         # ga.population will be replaced with random individuals
