@@ -97,10 +97,6 @@ class DiversityManagement:
         # Keep certain percentage of current generation individuals. Clones will be removed first then the rest according to there biased fitness
         self.ga.population[:num_to_keep] = np.array(unique_individuals[:num_to_keep], dtype=self.ga.population.dtype)
 
-        # Fitness evaluation updating for the randoms
-        self.ga.fitness_evaluation()
-        self.calculate_biased_fitness()
-
     def kill_clones(self):
         print("KILL CLONES")
         unique_fitness = set()

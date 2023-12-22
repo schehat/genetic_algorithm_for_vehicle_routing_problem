@@ -62,7 +62,7 @@ if __name__ == "__main__":
     POPULATION_SIZE = 40
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 43
+    MAX_GENERATIONS = 15
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
@@ -70,7 +70,6 @@ if __name__ == "__main__":
     LOCAL_SEARCH_METHOD = two_opt
     DISTANCE_METHOD = broken_pairs_distance
 
-    # Configure GA and run
     ga = GA(VRP_INSTANCE,
             POPULATION_SIZE,
             MAX_GENERATIONS,
@@ -80,4 +79,5 @@ if __name__ == "__main__":
             LOCAL_SEARCH_METHOD,
             DISTANCE_METHOD,
             INSTANCE_NAME)
+
     ga.run()
