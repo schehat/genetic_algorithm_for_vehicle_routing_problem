@@ -91,6 +91,7 @@ class Education:
         best_insert_position = None
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
+            # bug, give depot_i_vehicle?
             best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
@@ -147,7 +148,7 @@ class Education:
         max_depot_iterations = 3
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
-            best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
+            best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1, depot_i_vehicle=depot_i)[0][-1]
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
             n_improvements = 0
@@ -196,9 +197,9 @@ class Education:
             # Sets the best candidate as the new self.chromosome
             chromosome, fitness = self.run_neighborhood_search(method, self.current_chromosome.copy(), fitness)
 
-        if fitness < self.current_fitness:
-            self.current_fitness = fitness
-            self.current_chromosome = chromosome.copy()
+            if fitness < self.current_fitness:
+                self.current_fitness = fitness
+                self.current_chromosome = chromosome.copy()
 
     def run_neighborhood_search(self, neighborhood_search, chromosome: ndarray, fitness) -> Tuple[ndarray, float]:
         """
@@ -210,7 +211,9 @@ class Education:
 
         # Run neighborhood search
         for _ in range(self.neighborhood_iterations):
+            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
             chromosome_candidate = neighborhood_search(best_chromosome.copy(), self.customer_index_list)
+            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
             fitness_candidate = self.ga.decode_chromosome(chromosome_candidate)[0]
 
             # Update the best candidate and best fitness if needed

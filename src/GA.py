@@ -259,11 +259,12 @@ class GA:
 
             self.do_elitism(top_infeasible_individuals)
             self.do_elitism(top_feasible_individuals)
-            best_ind = self.education_best_individuals()
 
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
             self.diversity_management.calculate_biased_fitness()
+            best_ind = self.education_best_individuals()
+            self.do_elitism(np.array([best_ind]))
             # Track number of no improvements
             self.save_fitness_statistics()
             self.save_feasible_stats()
@@ -271,6 +272,9 @@ class GA:
 
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
+                self.do_elitism(top_infeasible_individuals)
+                self.do_elitism(top_feasible_individuals)
+                self.do_elitism(np.array([best_ind]))
             # else:
             #     self.diversity_management.kill_clones()
 
@@ -288,8 +292,7 @@ class GA:
                 self.diversity_management.diversity_procedure()
                 self.do_elitism(top_infeasible_individuals)
                 self.do_elitism(top_feasible_individuals)
-
-            self.do_elitism(np.array([best_ind]))
+                self.do_elitism(np.array([best_ind]))
 
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
@@ -518,6 +521,7 @@ class GA:
         new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
             new_chromosome)
+        print(best_ind["fitness"], new_fitness, total_fitness)
         if total_fitness < best_ind["fitness"]:
             best_ind["fitness"] = total_fitness
             best_ind["chromosome"] = new_chromosome
@@ -531,7 +535,7 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"]:
+            if individual["fitness"] == best_ind["fitness"] and individual["fitness"] < self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
@@ -543,6 +547,7 @@ class GA:
                 individual["chromosome"] = new_chromosome
 
             # print(f"NEW RANDOM index: {i},  {individual}")
+            print(individual["fitness"], new_fitness, total_fitness)
 
             if counter >= 2:
                 break
