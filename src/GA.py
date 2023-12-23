@@ -56,19 +56,19 @@ class GA:
                  n_elite: int = 8,
                  p_c: float = 1.0,
                  p_m: float = 0.2,
-                 p_education: float = 0.0,
+                 p_education: float = 0.1,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 5,
-                 p_selection_survival: float = 0.75,
+                 survivor_selection_step: int = 10,
+                 p_selection_survival: float = 0.7,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
                  diversity_weight: float = 0.5,
-                 duration_penalty_factor: float = 6.0,
+                 duration_penalty_factor: float = 5.0,
                  time_window_penalty: float = 5.0,
-                 penalty_factor: float = 0.05,
+                 penalty_factor: float = 0.00,
 
                  target_feasible_proportion: float = 0.25
                  ):
@@ -244,7 +244,7 @@ class GA:
 
             # Inverse condition
             infeasible_individuals = self.population[~condition]
-            top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:min(1, self.n_elite - len(top_feasible_individuals))]
+            top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite - len(top_feasible_individuals)]
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             self.selection_method(self.population, self.tournament_size)
@@ -257,21 +257,23 @@ class GA:
             # Replace old generation with new generation
             self.population["chromosome"] = self.children
 
+            self.do_elitism(top_infeasible_individuals)
+            self.do_elitism(top_feasible_individuals)
+            best_ind = self.education_best_individuals()
+
+            # self.fitness_scaling(self.population)
+            self.fitness_evaluation()
+            self.diversity_management.calculate_biased_fitness()
+            # Track number of no improvements
+            self.save_fitness_statistics()
+            self.save_feasible_stats()
+            self.adjust_penalty()
+
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
             # else:
             #     self.diversity_management.kill_clones()
 
-            self.do_elitism(top_infeasible_individuals)
-            self.do_elitism(top_feasible_individuals)
-            self.education_best_individuals()
-
-            # self.fitness_scaling(self.population)
-            self.fitness_evaluation()
-            self.diversity_management.calculate_biased_fitness()
-
-            # Track number of no improvements
-            self.save_fitness_statistics()
             min_current_fitness = self.fitness_stats[self.generation]["min"]
             if min_current_fitness > self.best_solution["fitness"] - 0.0000001:
                 self.no_improvement_counter += 1
@@ -287,9 +289,7 @@ class GA:
                 self.do_elitism(top_infeasible_individuals)
                 self.do_elitism(top_feasible_individuals)
 
-            self.save_fitness_statistics()
-            self.save_feasible_stats()
-            self.adjust_penalty()
+            self.do_elitism(np.array([best_ind]))
 
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
@@ -519,7 +519,7 @@ class GA:
         total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
             new_chromosome)
         if total_fitness < best_ind["fitness"]:
-            best_ind["fitness"] = new_fitness
+            best_ind["fitness"] = total_fitness
             best_ind["chromosome"] = new_chromosome
 
         population_indices = list(range(self.population_size))
@@ -539,13 +539,15 @@ class GA:
             total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
                 new_chromosome)
             if total_fitness <= individual["fitness"]:
-                individual["fitness"] = new_fitness
+                individual["fitness"] = total_fitness
                 individual["chromosome"] = new_chromosome
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
-            if counter >= 3:
+            if counter >= 2:
                 break
+
+        return best_ind
 
     def do_elitism(self, top_individuals: ndarray) -> None:
         """
