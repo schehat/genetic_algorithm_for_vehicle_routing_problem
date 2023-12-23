@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 0.5
+    MAX_RUNNING_TIME_IN_S = 3600 * 1.0
     start_time = None
     end_time = None
     children = None
@@ -264,7 +264,7 @@ class GA:
 
             self.do_elitism(top_infeasible_individuals)
             self.do_elitism(top_feasible_individuals)
-            # self.education_best_individuals()
+            self.education_best_individuals()
 
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
@@ -578,9 +578,9 @@ class GA:
                 self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 20)
                 self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 20)
             else:
-                self.capacity_penalty_factor *= max((1 - self.penalty_factor), 2)
-                self.duration_penalty_factor *= max((1 - self.penalty_factor), 2)
-                self.time_window_penalty *= max((1 - self.penalty_factor), 2)
+                self.capacity_penalty_factor *= max((1 - self.penalty_factor), 1)
+                self.duration_penalty_factor *= max((1 - self.penalty_factor), 1)
+                self.time_window_penalty *= max((1 - self.penalty_factor), 1)
             print(temp, self.duration_penalty_factor)
 
     def print_time_and_text(self, text: str):
