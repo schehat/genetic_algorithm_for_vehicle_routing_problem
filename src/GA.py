@@ -69,9 +69,9 @@ class GA:
                  capacity_penalty_factor: float = 5.0,
                  duration_penalty_factor: float = 5.0,
                  time_window_penalty: float = 5.0,
-                 penalty_factor: float = 0.03,
+                 penalty_factor: float = 0.05,
 
-                 target_feasible_proportion: float = 0.25
+                 target_feasible_proportion: float = 0.2
                  ):
 
         self.vrp_instance: VRPInstance = vrp_instance
