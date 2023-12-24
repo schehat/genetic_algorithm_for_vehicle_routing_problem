@@ -54,21 +54,22 @@ class GA:
 
                  tournament_size: int = 2,
                  n_elite: int = 8,
-                 p_c: float = 1.0,
-                 p_m: float = 0.3,
-                 p_education: float = 0.1,
+                 p_c: float = 0.9,
+                 p_m: float = 0.2,
+                 p_education: float = 0.0,
 
                  penalty_step: int = 2,
                  survivor_selection_step: int = 10,
-                 p_selection_survival: float = 0.7,
+                 p_selection_survival: float = 0.75,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
                  diversity_weight: float = 0.5,
+                 capacity_penalty_factor: float = 5.0,
                  duration_penalty_factor: float = 5.0,
                  time_window_penalty: float = 5.0,
-                 penalty_factor: float = 0.00,
+                 penalty_factor: float = 0.03,
 
                  target_feasible_proportion: float = 0.25
                  ):
@@ -106,15 +107,16 @@ class GA:
         self.distance_method = distance_method
 
         # Calculate average distance between two customers
-        customer_positions = np.array([[customer.x, customer.y] for customer in self.vrp_instance.customers])
-        differences = customer_positions[:, np.newaxis, :] - customer_positions[np.newaxis, :, :]
-        distances = np.linalg.norm(differences, axis=2)
-        np.fill_diagonal(distances, 0)  # Set diagonal elements to 0 as distance to itself
-        average_distance_between_two_customers = np.mean(distances)
-        # Calculate average demand of all customers
-        demands = np.array([customer.demand for customer in self.vrp_instance.customers])
-        average_demand = np.mean(demands)
-        self.capacity_penalty_factor = average_distance_between_two_customers / average_demand
+        # customer_positions = np.array([[customer.x, customer.y] for customer in self.vrp_instance.customers])
+        # differences = customer_positions[:, np.newaxis, :] - customer_positions[np.newaxis, :, :]
+        # distances = np.linalg.norm(differences, axis=2)
+        # np.fill_diagonal(distances, 0)  # Set diagonal elements to 0 as distance to itself
+        # average_distance_between_two_customers = np.mean(distances)
+        # # Calculate average demand of all customers
+        # demands = np.array([customer.demand for customer in self.vrp_instance.customers])
+        # average_demand = np.mean(demands)
+        # self.capacity_penalty_factor = average_distance_between_two_customers / average_demand
+        self.capacity_penalty_factor = capacity_penalty_factor
         self.duration_penalty_factor = duration_penalty_factor
         self.time_window_penalty = time_window_penalty
         self.penalty_factor = penalty_factor
@@ -184,7 +186,7 @@ class GA:
             top_feasible_individual_i = np.argsort(feasible_individuals["fitness"])[0]
             top_feasible_individual = feasible_individuals[top_feasible_individual_i]
             best_feasible_solution = top_feasible_individual.copy()
-            # self.best_solution = top_feasible_individual.copy()
+            self.best_solution = top_feasible_individual.copy()
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution['fitness']}")
         self.local_search_method(self, self.best_solution)
@@ -273,11 +275,9 @@ class GA:
 
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
-                self.do_elitism(top_infeasible_individuals)
-                self.do_elitism(top_feasible_individuals)
                 self.do_elitism(np.array([best_ind]))
-            # else:
-            #     self.diversity_management.kill_clones()
+            else:
+                self.diversity_management.kill_clones()
 
             min_current_fitness = self.fitness_stats[self.generation]["min"]
             if min_current_fitness > self.best_solution["fitness"] - 0.0000001:
@@ -508,21 +508,22 @@ class GA:
                     print("Education Error")
 
     def education_best_individuals(self):
-        # condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
-        #         self.population["duration_violation"] == 0)
-        # feasible_individuals = self.population[condition]
-        # if len(feasible_individuals) > 0:
-        #     top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
-        #     best_ind = feasible_individuals[top_feasible_individual]
-        # else:
-        #     infeasible_individuals = self.population[~condition]
-        #     top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
-        #     best_ind = infeasible_individuals[top_infeasible_individual_i]
+        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
+                self.population["duration_violation"] == 0)
+        feasible_individuals = self.population[condition]
+        if len(feasible_individuals) > 0:
+            top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
+            best_ind = feasible_individuals[top_feasible_individual]
+        else:
+            infeasible_individuals = self.population[~condition]
+            top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
+            best_ind = infeasible_individuals[top_infeasible_individual_i]
 
-        best_ind = self.population[np.argsort(self.population["fitness"])[0]]
+        # best_ind = self.population[np.argsort(self.population["fitness"])[0]]
         new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
             new_chromosome)
+        old_ind_fitness = best_ind["fitness"]
         print(best_ind["fitness"], new_fitness, total_fitness)
         if total_fitness < best_ind["fitness"]:
             best_ind["fitness"] = total_fitness
@@ -537,7 +538,7 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"]: # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
+            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness: # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
@@ -583,9 +584,9 @@ class GA:
             self.n_feasible = len(feasible_indices)
 
             if self.n_feasible < self.target_feasible_proportion:
-                self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 20)
-                self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 20)
-                self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 20)
+                self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 15)
+                self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 15)
+                self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 15)
             else:
                 self.capacity_penalty_factor *= max((1 - self.penalty_factor), 1)
                 self.duration_penalty_factor *= max((1 - self.penalty_factor), 1)

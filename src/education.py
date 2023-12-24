@@ -92,7 +92,7 @@ class Education:
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
             # bug, give depot_i_vehicle?
-            best_fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1)[0][-1]
+            best_fitness = float("inf")
             single_depot_chromosome = [x for i, x in enumerate(single_depot_chromosome) if x != customer or i == 0]
 
             # n_improvements = 0
