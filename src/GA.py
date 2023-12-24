@@ -184,7 +184,7 @@ class GA:
             top_feasible_individual_i = np.argsort(feasible_individuals["fitness"])[0]
             top_feasible_individual = feasible_individuals[top_feasible_individual_i]
             best_feasible_solution = top_feasible_individual.copy()
-            self.best_solution = top_feasible_individual.copy()
+            # self.best_solution = top_feasible_individual.copy()
 
         print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution['fitness']}")
         self.local_search_method(self, self.best_solution)
@@ -263,6 +263,7 @@ class GA:
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
             self.diversity_management.calculate_biased_fitness()
+            # self.save_fitness_statistics()
             best_ind = self.education_best_individuals()
             self.do_elitism(np.array([best_ind]))
             # Track number of no improvements
@@ -536,7 +537,7 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] < self.fitness_stats[self.generation]["avg"]:
+            if individual["fitness"] == best_ind["fitness"]: # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
