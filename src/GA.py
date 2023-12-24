@@ -521,13 +521,10 @@ class GA:
 
         # best_ind = self.population[np.argsort(self.population["fitness"])[0]]
         new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
-        total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
-            new_chromosome)
         old_ind_fitness = best_ind["fitness"]
-        print(best_ind["fitness"], new_fitness, total_fitness)
-        if total_fitness < best_ind["fitness"]:
-            best_ind["fitness"] = total_fitness
-            best_ind["chromosome"] = new_chromosome
+        print(best_ind["fitness"], new_fitness)
+        best_ind["fitness"] = new_fitness
+        best_ind["chromosome"] = new_chromosome
 
         population_indices = list(range(self.population_size))
         shuffle(population_indices)
@@ -538,17 +535,14 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness: # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
+            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness:  # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
-            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
-                new_chromosome)
-            print(individual["fitness"], new_fitness, total_fitness)
-            if total_fitness <= individual["fitness"]:
-                individual["fitness"] = total_fitness
-                individual["chromosome"] = new_chromosome
+            print(individual["fitness"], new_fitness)
+            individual["fitness"] = new_fitness
+            individual["chromosome"] = new_chromosome
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
