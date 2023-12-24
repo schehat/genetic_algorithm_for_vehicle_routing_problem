@@ -55,7 +55,7 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 1.0,
-                 p_m: float = 0.2,
+                 p_m: float = 0.3,
                  p_education: float = 0.1,
 
                  penalty_step: int = 2,
@@ -507,17 +507,18 @@ class GA:
                     print("Education Error")
 
     def education_best_individuals(self):
-        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
-                self.population["duration_violation"] == 0)
-        feasible_individuals = self.population[condition]
-        if len(feasible_individuals) > 0:
-            top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
-            best_ind = feasible_individuals[top_feasible_individual]
-        else:
-            infeasible_individuals = self.population[~condition]
-            top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
-            best_ind = infeasible_individuals[top_infeasible_individual_i]
+        # condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
+        #         self.population["duration_violation"] == 0)
+        # feasible_individuals = self.population[condition]
+        # if len(feasible_individuals) > 0:
+        #     top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
+        #     best_ind = feasible_individuals[top_feasible_individual]
+        # else:
+        #     infeasible_individuals = self.population[~condition]
+        #     top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
+        #     best_ind = infeasible_individuals[top_infeasible_individual_i]
 
+        best_ind = self.population[np.argsort(self.population["fitness"])[0]]
         new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
             new_chromosome)
@@ -535,19 +536,19 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"] and individual["fitness"] < self.fitness_stats[self.generation]["avg"]:
+            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] < self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
             total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
                 new_chromosome)
+            print(individual["fitness"], new_fitness, total_fitness)
             if total_fitness <= individual["fitness"]:
                 individual["fitness"] = total_fitness
                 individual["chromosome"] = new_chromosome
 
             # print(f"NEW RANDOM index: {i},  {individual}")
-            print(individual["fitness"], new_fitness, total_fitness)
 
             if counter >= 2:
                 break
