@@ -192,6 +192,7 @@ class GA:
         # Need to decode again to log chromosome correctly after local search
         self.decode_chromosome(self.best_solution["chromosome"])
         print(f"best solution after local search {self.best_solution['fitness']}")
+        print(f"best solution: {self.best_solution}")
         print(f"best feasible: {best_feasible_solution}")
         self.fitness_stats[self.generation]["min"] = self.best_solution["fitness"]
         if self.best_solution["capacity_violation"] == 0 and self.best_solution["time_warp"] == 0 and \
@@ -581,9 +582,9 @@ class GA:
                 self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 15)
                 self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 15)
             else:
-                self.capacity_penalty_factor *= max((1 - self.penalty_factor), 1)
-                self.duration_penalty_factor *= max((1 - self.penalty_factor), 1)
-                self.time_window_penalty *= max((1 - self.penalty_factor), 1)
+                self.capacity_penalty_factor = max(self.capacity_penalty_factor * (1 - self.penalty_factor), 2)
+                self.duration_penalty_factor = max(self.duration_penalty_factor * (1 - self.penalty_factor), 2)
+                self.time_window_penalty = max(self.time_window_penalty - (1 + self.penalty_factor), 2)
             print(temp, self.duration_penalty_factor)
 
     def print_time_and_text(self, text: str):
