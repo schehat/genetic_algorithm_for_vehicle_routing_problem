@@ -496,13 +496,13 @@ class GA:
                     two_opt(self, self.population[i])
                     self.children[i] = self.population[i]["chromosome"]
 
-            if random() < self.p_education:
-                try:
-                    current_fitness = float(self.decode_chromosome(chromosome)[0])
-                    self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, current_fitness,
-                                                                                         limited=True)
-                except:
-                    print("Education Error")
+            # if random() < self.p_education:
+            #     try:
+            #         current_fitness = float(self.decode_chromosome(chromosome)[0])
+            #         self.children[i], self.population[i]["fitness"] = self.education.run(chromosome, current_fitness,
+            #                                                                              limited=True)
+            #     except:
+            #         print("Education Error")
 
     def education_best_individuals(self):
         condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (

@@ -30,8 +30,8 @@ class Mutation:
         """
 
         # Define the range for mutated number of customers. TODO: is ok?
-        min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
-        max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
+        # min_customer = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
+        # max_customer = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
         #
         # # Iterate through the vehicles and apply uniform mutation
         # for i in range(self.vrp_instance.n_depots):
@@ -42,8 +42,8 @@ class Mutation:
         # self._repair_procedure(chromosome)
 
         depot1, depot2 = np.random.choice(self.vrp_instance.n_depots, size=2, replace=False)
-        chromosome[depot1] = min(max_customer, chromosome[depot1] + 1)
-        chromosome[depot1] = max(min_customer, chromosome[depot1] - 1)
+        chromosome[depot1] = chromosome[depot1] + 1
+        chromosome[depot2] = chromosome[depot2] - 1
 
     def _repair_procedure(self, chromosome: np.ndarray):
         """
