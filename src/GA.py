@@ -539,7 +539,7 @@ class GA:
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
             print(individual["fitness"], new_fitness)
-            if new_fitness - 0.00001 < individual["fitness"] and new_fitness - old_ind_fitness > 0.00001:
+            if new_fitness - 0.00001 < individual["fitness"] and abs(new_fitness - old_ind_fitness) > 0.00001:
                 individual["fitness"] = new_fitness
                 individual["chromosome"] = new_chromosome
 
