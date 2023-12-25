@@ -53,7 +53,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_NAME = "pr02"
+    INSTANCE_NAME = "pr01"
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     POPULATION_SIZE = 40
     CROSSOVER_RATE = 0.5
     MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 500
+    MAX_GENERATIONS = 10
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank

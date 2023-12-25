@@ -28,7 +28,6 @@ class Plot:
 
         plt.figure(figsize=(self.width, self.height))
 
-        x = np.arange(self.ga.max_generations)
         min_fitness = self.ga.fitness_stats["min"]
         avg_fitness = self.ga.fitness_stats["avg"]
 
@@ -45,7 +44,6 @@ class Plot:
             avg_fitness_intervals = np.append(avg_fitness_intervals, avg_fitness[self.ga.generation])
 
         plt.plot(x_intervals, min_fitness_intervals, marker='o', label='Min Fitness')
-        plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
 
         plt.xlabel('Generation')
         plt.ylabel('Fitness')
@@ -53,6 +51,11 @@ class Plot:
         plt.grid(True)
         plt.legend()
         self.save_plot(f"{self.ga.file_prefix_name}", f"fitness")
+
+        plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
+        plt.legend()
+        self.save_plot(f"{self.ga.file_prefix_name}", f"fitness_with_avg")
+        # plt.show()
 
     def plot_routes(self, individual: ndarray, width=12, height=10):
         """

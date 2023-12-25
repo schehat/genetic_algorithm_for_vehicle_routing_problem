@@ -55,7 +55,7 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.2,
+                 p_m: float = 0.4,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
@@ -146,7 +146,6 @@ class GA:
         self.population = np.zeros(self.population_size, dtype=population_type)
         self.target_feasible_proportion = int(target_feasible_proportion * self.population_size)
         self.n_feasible = 0
-        self.feasible_population = np.zeros(0, dtype=population_type)
         self.best_solution = np.zeros(1, dtype=population_type)
         self.best_solution[0]["fitness"] = float("inf")
         self.fitness_stats = np.zeros(max_generations + 1,
@@ -156,9 +155,6 @@ class GA:
                                            ("min_scaled", float)]))
         self.feasible_stats = np.zeros(max_generations, dtype=np.dtype([("feasible", float), ("infeasible", float)]))
         self.route_data = []
-
-        self.old_population_size = self.population_size
-        self.old_n_elite = self.n_elite
 
         self.p_swap = 0.33
         self.p_inversion = 0.66
@@ -188,13 +184,14 @@ class GA:
             best_feasible_solution = top_feasible_individual.copy()
             self.best_solution = top_feasible_individual.copy()
 
-        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution['fitness']}")
+        old_best_solution = self.best_solution
+        print(f"best solution before local search {self.best_solution['fitness']}")
         self.local_search_method(self, self.best_solution)
         self.end_time = time.time()
 
         # Need to decode again to log chromosome correctly after local search
         self.decode_chromosome(self.best_solution["chromosome"])
-        print(f"min: {np.min(self.fitness_stats['min'])} ?= {self.best_solution}")
+        print(f"best solution after local search {self.best_solution['fitness']}")
         print(f"best feasible: {best_feasible_solution}")
         self.fitness_stats[self.generation]["min"] = self.best_solution["fitness"]
         if self.best_solution["capacity_violation"] == 0 and self.best_solution["time_warp"] == 0 and \
@@ -206,7 +203,7 @@ class GA:
 
         self.plotter.plot_fitness()
         self.plotter.plot_routes(self.best_solution["chromosome"])
-        self.log_configuration(self.best_solution, best_feasible_solution)
+        self.log_configuration(self.best_solution, old_best_solution, best_feasible_solution)
 
         # BELOW TESTING
         #
@@ -523,8 +520,9 @@ class GA:
         new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         old_ind_fitness = best_ind["fitness"]
         print(best_ind["fitness"], new_fitness)
-        best_ind["fitness"] = new_fitness
-        best_ind["chromosome"] = new_chromosome
+        if new_fitness - 0.00001 < old_ind_fitness:
+            best_ind["fitness"] = new_fitness
+            best_ind["chromosome"] = new_chromosome
 
         population_indices = list(range(self.population_size))
         shuffle(population_indices)
@@ -541,8 +539,9 @@ class GA:
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
             print(individual["fitness"], new_fitness)
-            individual["fitness"] = new_fitness
-            individual["chromosome"] = new_chromosome
+            if new_fitness - 0.00001 < individual["fitness"] and new_fitness - old_ind_fitness > 0.00001:
+                individual["fitness"] = new_fitness
+                individual["chromosome"] = new_chromosome
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
@@ -611,7 +610,7 @@ class GA:
         self.feasible_stats[self.generation]["feasible"] = self.n_feasible
         self.feasible_stats[self.generation]["infeasible"] = self.population_size - self.n_feasible
 
-    def log_configuration(self, individual, best_feasible_solution) -> None:
+    def log_configuration(self, individual, old_best_solution, best_feasible_solution) -> None:
         """
         Logs every relevant parameter
         param: individual - the best solution found
@@ -627,21 +626,23 @@ class GA:
         with open(os.path.join(self.file_prefix_name, 'best_chromosome.txt'), 'a') as file:
             file.write(f'\nTotal Runtime in seconds: {self.end_time - self.start_time}'
                        f'Parameters:'
-                       f'\npopulation_size: {self.old_population_size}/{self.population_size}, max_generations: {self.max_generations}, executed generations: {self.generation}, threshold_no_improvement: {self.threshold_no_improvement}'
+                       f'\npopulation_size: {self.population_size}, max_generations: {self.max_generations}, executed generations: {self.generation}, threshold_no_improvement: {self.threshold_no_improvement}'
+                       f'\ntarget feasible proportion: {self.target_feasible_proportion}'
                        f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
                        f'\np_c: {self.p_c}, p_m: {self.p_m}, NOT YET p_education: {self.p_education}'
-                       f'\ntournament_size: {self.tournament_size}, n_elite: {self.old_n_elite}/{self.n_elite}'
+                       f'\ntournament_size: {self.tournament_size}, n_elite: {self.n_elite}'
                        f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival} '
                        f'\ndiversify_step: {self.diversify_step}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
                        f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'
                        f'\ncapacity_penalty_factor: {self.capacity_penalty_factor}, duration_penalty_factor {self.duration_penalty_factor}, time_window_penalty: {self.time_window_penalty}'
-                       f'\nBest fitness before/after local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])} / {individual["fitness"]}'
-                       f'\nBest individual found: {individual}'
+                       f'\nBest fitness all generations, best individual before/after local search: {np.min(self.fitness_stats["min"][self.fitness_stats["min"] != 0])}, {old_best_solution["fitness"]} / {individual["fitness"]}'
+                       f'\nBest individual found before local search: {old_best_solution}'
+                       f'\nBest individual found after local search: {individual}'
                        f'\nBest feasible individual found: {best_feasible_solution}'
                        f'\n\nFitness stats min: {self.fitness_stats["min"][:self.generation + 1]} '
                        f'\n\nFitness stats feasible min: {self.fitness_stats["min_feasible"][:self.generation + 1]} '
                        f'\n\nFitness stats avg: {self.fitness_stats["avg"][:self.generation + 1]} '
-                       f'\n\nFeasible stats: {self.fitness_stats["avg"][:self.generation + 1]} '
+                       f'\n\nFeasible stats: {self.feasible_stats} '
                        f'\nSolution Description: '
                        f'\np: {self.p_complete} '
                        f'\npred: {self.pred_complete} '
