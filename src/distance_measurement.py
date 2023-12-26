@@ -24,6 +24,15 @@ def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray, n_depots
         if (index_b1 + 1) % n != index_b2:
             broken_pairs_count += 1
 
+    # NOT CLEAN HAMMING FOR DEPOT INFORMATION
+    for i in range(n_depots):
+        customer_a_i = chromosome_a[i]
+        customer_b_i = chromosome_b[i]
+
+        # Check if the elements at the same position are different
+        if customer_a_i != customer_b_i:
+            broken_pairs_count += abs(customer_a_i - customer_b_i)
+
     return broken_pairs_count
 
 

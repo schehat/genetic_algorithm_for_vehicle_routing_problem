@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 2/6
+    MAX_RUNNING_TIME_IN_S = 3600 * 3/12
     start_time = None
     end_time = None
     children = None
@@ -55,12 +55,13 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.2,
+                 p_m: float = 0.3,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
                  survivor_selection_step: int = 10,
                  p_selection_survival: float = 0.75,
+                 kill_clone_step: int = 1,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
@@ -78,7 +79,7 @@ class GA:
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
-        self.file_prefix_name = f"../BA_results/{instance_name}/p_m={p_m}/{self.TIMESTAMP}"
+        self.file_prefix_name = f"../BA_results/{instance_name}/initial=random/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -98,6 +99,7 @@ class GA:
         self.penalty_step = penalty_step
         self.survivor_selection_step = survivor_selection_step
         self.p_selection_survival = p_selection_survival
+        self.kill_clone_step = kill_clone_step
         self.threshold_no_improvement = int(0.5 * self.max_generations)
         self.diversify_step = diversify_step
         self.p_diversify_survival = p_diversify_survival
@@ -169,6 +171,7 @@ class GA:
 
         self.start_time = time.time()
         self.initial_population(self)
+        # initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
@@ -270,15 +273,20 @@ class GA:
             # Track number of no improvements
             self.save_fitness_statistics()
             self.save_feasible_stats()
-            self.adjust_penalty()
 
+            if (self.generation + 1) % self.penalty_step == 0:
+                self.adjust_penalty()
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
-            else:
+            elif (self.generation + 1) % self.kill_clone_step == 0:
                 self.diversity_management.kill_clones()
 
             self.do_elitism(np.array([best_ind]))
-            self.save_fitness_statistics()
+            if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
+                self.fitness_stats[self.generation]["min"] = best_ind["fitness"]
+                if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (best_ind["duration_violation"]) == 0:
+                    self.fitness_stats[self.generation]["min_feasible"] = best_ind["fitness"]
+
             min_current_fitness = self.fitness_stats[self.generation]["min"]
             if min_current_fitness > self.best_solution["fitness"] - 0.0000001:
                 self.no_improvement_counter += 1
@@ -525,11 +533,16 @@ class GA:
             new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         else:
             new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
+        total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
         old_ind_fitness = best_ind["fitness"]
-        print(best_ind["fitness"], new_fitness)
-        if new_fitness - 0.00001 < old_ind_fitness:
-            best_ind["fitness"] = new_fitness
+        print(best_ind["fitness"], new_fitness, total_fitness)
+        if total_fitness - 0.00001 < old_ind_fitness:
             best_ind["chromosome"] = new_chromosome
+            best_ind["fitness"] = total_fitness
+            best_ind["distance"] = total_distance
+            best_ind["capacity_violation"] = total_capacity_violation
+            best_ind["time_warp"] = total_time_warp
+            best_ind["duration_violation"] = total_duration_violation
         self.education_old_fitness = best_ind["fitness"]
 
         population_indices = list(range(self.population_size))
@@ -546,10 +559,16 @@ class GA:
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
-            print(individual["fitness"], new_fitness)
-            if new_fitness - 0.00001 < individual["fitness"] and abs(new_fitness - old_ind_fitness) > 0.00001:
-                individual["fitness"] = new_fitness
+
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+            print(individual["fitness"], new_fitness, total_fitness)
+            if total_fitness - 0.00001 < individual["fitness"] and abs(total_fitness - old_ind_fitness) > 0.00001:
                 individual["chromosome"] = new_chromosome
+                individual["fitness"] = total_fitness
+                individual["distance"] = total_distance
+                individual["capacity_violation"] = total_capacity_violation
+                individual["time_warp"] = total_time_warp
+                individual["duration_violation"] = total_duration_violation
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
@@ -572,27 +591,26 @@ class GA:
             self.population[worst_individuals_i[:num_to_replace]] = top_individuals[:num_to_replace]
 
     def adjust_penalty(self):
-        if (self.generation + 1) % self.penalty_step == 0:
-            temp = self.duration_penalty_factor
+        temp = self.duration_penalty_factor
 
-            # Check conditions for constraint violations
-            condition = (self.population["capacity_violation"] == 0) & (
-                    self.population["time_warp"] == 0) & (
-                                self.population["duration_violation"] == 0)
+        # Check conditions for constraint violations
+        condition = (self.population["capacity_violation"] == 0) & (
+                self.population["time_warp"] == 0) & (
+                            self.population["duration_violation"] == 0)
 
-            # Get the indices where the condition is true
-            feasible_indices = np.where(condition)[0]
-            self.n_feasible = len(feasible_indices)
+        # Get the indices where the condition is true
+        feasible_indices = np.where(condition)[0]
+        self.n_feasible = len(feasible_indices)
 
-            if self.n_feasible < self.target_feasible_proportion:
-                self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 15)
-                self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 15)
-                self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 15)
-            else:
-                self.capacity_penalty_factor = max(self.capacity_penalty_factor * (1 - self.penalty_factor), 2)
-                self.duration_penalty_factor = max(self.duration_penalty_factor * (1 - self.penalty_factor), 2)
-                self.time_window_penalty = max(self.time_window_penalty - (1 + self.penalty_factor), 2)
-            print(temp, self.duration_penalty_factor)
+        if self.n_feasible < self.target_feasible_proportion:
+            self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 15)
+            self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 15)
+            self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 15)
+        else:
+            self.capacity_penalty_factor = max(self.capacity_penalty_factor * (1 - self.penalty_factor), 2)
+            self.duration_penalty_factor = max(self.duration_penalty_factor * (1 - self.penalty_factor), 2)
+            self.time_window_penalty = max(self.time_window_penalty - (1 + self.penalty_factor), 2)
+        print(temp, self.duration_penalty_factor)
 
     def print_time_and_text(self, text: str):
         self.end_time = time.time()
@@ -639,7 +657,8 @@ class GA:
                        f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
                        f'\np_c: {self.p_c}, p_m: {self.p_m}, NOT YET p_education: {self.p_education}'
                        f'\ntournament_size: {self.tournament_size}, n_elite: {self.n_elite}'
-                       f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival} '
+                       f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival}'                       
+                       f'\nkill clone step: {self.kill_clone_step}'
                        f'\ndiversify_step: {self.diversify_step}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
                        f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'
                        f'\ncapacity_penalty_factor: {self.capacity_penalty_factor}, duration_penalty_factor {self.duration_penalty_factor}, time_window_penalty: {self.time_window_penalty}'
