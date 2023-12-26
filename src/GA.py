@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 1.0
+    MAX_RUNNING_TIME_IN_S = 3600 * 2/6
     start_time = None
     end_time = None
     children = None
@@ -55,7 +55,7 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.4,
+                 p_m: float = 0.2,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
@@ -159,6 +159,8 @@ class GA:
         self.p_swap = 0.33
         self.p_inversion = 0.66
         self.p_insertion = 1.0
+
+        self.education_old_fitness = 0
 
     def run(self):
         """
@@ -265,7 +267,6 @@ class GA:
             self.diversity_management.calculate_biased_fitness()
             # self.save_fitness_statistics()
             best_ind = self.education_best_individuals()
-            self.do_elitism(np.array([best_ind]))
             # Track number of no improvements
             self.save_fitness_statistics()
             self.save_feasible_stats()
@@ -273,10 +274,11 @@ class GA:
 
             if (self.generation + 1) % self.survivor_selection_step == 0:
                 self.diversity_management.survivor_selection()
-                self.do_elitism(np.array([best_ind]))
             else:
                 self.diversity_management.kill_clones()
 
+            self.do_elitism(np.array([best_ind]))
+            self.save_fitness_statistics()
             min_current_fitness = self.fitness_stats[self.generation]["min"]
             if min_current_fitness > self.best_solution["fitness"] - 0.0000001:
                 self.no_improvement_counter += 1
@@ -518,12 +520,17 @@ class GA:
             best_ind = infeasible_individuals[top_infeasible_individual_i]
 
         # best_ind = self.population[np.argsort(self.population["fitness"])[0]]
-        new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
+        diff_fitness = abs(self.education_old_fitness - best_ind["fitness"])
+        if diff_fitness > 0.0001:
+            new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
+        else:
+            new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
         old_ind_fitness = best_ind["fitness"]
         print(best_ind["fitness"], new_fitness)
         if new_fitness - 0.00001 < old_ind_fitness:
             best_ind["fitness"] = new_fitness
             best_ind["chromosome"] = new_chromosome
+        self.education_old_fitness = best_ind["fitness"]
 
         population_indices = list(range(self.population_size))
         shuffle(population_indices)

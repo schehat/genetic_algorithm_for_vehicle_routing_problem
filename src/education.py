@@ -33,10 +33,15 @@ class Education:
         self.current_chromosome = chromosome.copy()
         self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
 
-        if limited:
-            self.route_improvement(self.current_chromosome.copy(), limited=True)
-        else:
+        # if not limited:
+        #     self.route_improvement(self.current_chromosome.copy(), limited=True)
+        # else:
+        #     self.route_improvement(self.current_chromosome.copy())
+        if not limited:
+            self.neighborhood_iterations = int(0.1 * self.ga.vrp_instance.n_customers)
             self.route_improvement(self.current_chromosome.copy())
+        else:
+            self.neighborhood_iterations = int(0.3 * self.ga.vrp_instance.n_customers)
         self.pattern_improvement()
 
         return self.current_chromosome, self.current_fitness
