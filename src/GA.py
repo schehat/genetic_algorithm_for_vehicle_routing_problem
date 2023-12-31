@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 1.0
+    MAX_RUNNING_TIME_IN_S = 3600 * 1/12
     start_time = None
     end_time = None
     children = None
@@ -60,8 +60,8 @@ class GA:
 
                  penalty_step: int = 2,
                  survivor_selection_step: int = 10,
-                 p_selection_survival: float = 0.75,
-                 kill_clone_step: int = 1,
+                 p_selection_survival: float = 0.70,
+                 kill_clone_step: int = 5,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
@@ -494,7 +494,9 @@ class GA:
         """
         for i, chromosome in enumerate(self.children):
             if random() <= self.p_m:
-                self.mutation.uniform(self.children[i])
+                if random() < 0.5:
+                    for j in range(3):
+                        self.mutation.uniform(self.children[i])
 
                 rand_num = random()
                 if rand_num < self.p_swap:
