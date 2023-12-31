@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 3/12
+    MAX_RUNNING_TIME_IN_S = 3600 * 1.0
     start_time = None
     end_time = None
     children = None
@@ -170,8 +170,8 @@ class GA:
         """
 
         self.start_time = time.time()
-        self.initial_population(self)
-        # initial_population_random(self, 0, self.population_size)
+        # self.initial_population(self)
+        initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
@@ -226,12 +226,13 @@ class GA:
         #                                     30,
         #                                     2, 47, 24, 12, 38, 40, 21, 43
         #                                     ]
-        # # self.local_search_method(self, self.population[0])
-        # self.decode_chromosome(self.population[0]["chromosome"])
-        # self.population[0]["fitness"] = self.total_fitness
-        # self.population[0]["distance"] = self.total_distance
-        # self.population[0]["time_warp"] = self.total_time_warp
-        # self.population[0]["duration_violation"] = self.total_duration_violation
+        #
+        # total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(self.population[0]["chromosome"])
+        # self.population[0]["fitness"] = total_fitness
+        # self.population[0]["distance"] = total_distance
+        # self.population[0]["capacity_violation"] = total_capacity_violation
+        # self.population[0]["time_warp"] = total_time_warp
+        # self.population[0]["duration_violation"] = total_duration_violation
         # print(self.population[0])
         # self.log_configuration(self.population[0])
 

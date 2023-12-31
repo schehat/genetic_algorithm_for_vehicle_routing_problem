@@ -71,8 +71,6 @@ class Split:
 
         # Shortest path containing cost
         p1 = [float('inf') if i > 0 else 0 for i in range(depot_i_n_customers + 1)]
-        # Copy for fleet size constraint
-        p2 = p1.copy()
         # Note from which node path comes from to build path
         pred = [0] * (depot_i_n_customers + 1)
         # Accumulating values for every depot. Resetting value to 0 for every next depot
@@ -82,102 +80,83 @@ class Split:
         time_warp_list = [0] * (depot_i_n_customers + 1)
         duration_list = [0] * (depot_i_n_customers + 1)
 
-        # number of arcs
-        k = 0
+        for t in range(depot_i_n_customers):
+            distance = 0
+            current_capacity = 0
 
-        while True:
-            k += 1
-            # Flag to detect modified labels
-            stable = True
+            distance_depot_start = 0
+            first_start_window = 0
 
-            for t in range(depot_i_n_customers):
-                distance = 0
-                current_capacity = 0
+            time_i = 0
+            sum_time_warp = 0
 
-                distance_depot_start = 0
-                first_start_window = 0
+            i = t + 1
 
-                time_i = 0
-                sum_time_warp = 0
-
-                i = t + 1
-
-                try:
-                    customer_value_i = chromosome[customer_offset + (i - 1)]
-                except:
-                    print("SPLIT ERROR")
-                    break
-                customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
-
-                # 2 * Capacity to allow infeasible solution for better space search
-                while i <= depot_i_n_customers and current_capacity + customer_i.demand <= 2 * self.ga.vrp_instance.max_capacity:
-
-                    current_capacity += customer_i.demand
-                    if i == t + 1:
-                        distance_to_customer = euclidean_distance(vehicle_i_depot, customer_i)
-                        distance = distance_to_customer
-                        time_i = customer_i.start_time_window
-
-                        distance_depot_start = distance
-                        first_start_window = customer_i.start_time_window
-                    else:
-                        customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
-                        customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
-                        distance_to_customer = euclidean_distance(customer_pre_i, customer_i)
-                        distance += distance_to_customer
-
-                        # Late arrival => time warp
-                        if time_i + customer_pre_i.service_duration + distance_to_customer > customer_i.end_time_window:
-                            sum_time_warp += max(
-                                time_i + customer_pre_i.service_duration + distance_to_customer - customer_i.end_time_window,
-                                0)
-                            time_i = customer_i.end_time_window
-                        # Early arrival => wait
-                        elif time_i + customer_pre_i.service_duration + distance_to_customer < customer_i.start_time_window:
-                            time_i = customer_i.start_time_window
-                        # In time window
-                        else:
-                            time_i += customer_pre_i.service_duration + distance_to_customer
-
-                    distance_to_depot = euclidean_distance(customer_i, vehicle_i_depot)
-                    duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
-                    cost = distance \
-                           + self.ga.duration_penalty_factor * max(0,
-                                                                   duration + distance_to_depot - self.ga.vrp_instance.max_duration_of_a_route) \
-                           + self.ga.capacity_penalty_factor * max(0,
-                                                                   current_capacity - self.ga.vrp_instance.max_capacity) \
-                           + self.ga.time_window_penalty * sum_time_warp
-                    # if new solution better than current then update labels
-                    if p1[t] + cost + distance_to_depot < p2[i]:
-                        p2[i] = p1[t] + cost + distance_to_depot
-                        pred[i] = t
-                        distance_list[i] = distance + distance_to_depot
-                        capacity_list[i] = current_capacity
-                        time_list[i] = time_i
-                        time_warp_list[i] = sum_time_warp
-                        duration_list[i] = duration + distance_to_depot
-
-                        stable = False
-
-                    i += 1
-
-                    # Bounds check
-                    if customer_offset + (i - 1) < self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers:
-                        try:
-                            customer_value_i = chromosome[customer_offset + (i - 1)]
-                            customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
-                        except IndexError:
-                            stable = False
-                            break
-                    else:
-                        stable = False
-                        break
-
-            # we have the paths with <= k arcs
-            p1 = p2.copy()
-
-            # Loop until stable or fleet exhausted
-            if stable or k == self.ga.vrp_instance.n_vehicles:
+            try:
+                customer_value_i = chromosome[customer_offset + (i - 1)]
+            except:
+                print("SPLIT ERROR")
                 break
+            customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
+
+            # 2 * Capacity to allow infeasible solution for better space search
+            while i <= depot_i_n_customers and current_capacity + customer_i.demand <= 2 * self.ga.vrp_instance.max_capacity:
+
+                current_capacity += customer_i.demand
+                if i == t + 1:
+                    distance_to_customer = euclidean_distance(vehicle_i_depot, customer_i)
+                    distance = distance_to_customer
+                    time_i = customer_i.start_time_window
+
+                    distance_depot_start = distance
+                    first_start_window = customer_i.start_time_window
+                else:
+                    customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
+                    customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
+                    distance_to_customer = euclidean_distance(customer_pre_i, customer_i)
+                    distance += distance_to_customer
+
+                    # Late arrival => time warp
+                    if time_i + customer_pre_i.service_duration + distance_to_customer > customer_i.end_time_window:
+                        sum_time_warp += max(
+                            time_i + customer_pre_i.service_duration + distance_to_customer - customer_i.end_time_window,
+                            0)
+                        time_i = customer_i.end_time_window
+                    # Early arrival => wait
+                    elif time_i + customer_pre_i.service_duration + distance_to_customer < customer_i.start_time_window:
+                        time_i = customer_i.start_time_window
+                    # In time window
+                    else:
+                        time_i += customer_pre_i.service_duration + distance_to_customer
+
+                distance_to_depot = euclidean_distance(customer_i, vehicle_i_depot)
+                duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
+                cost = distance \
+                       + self.ga.duration_penalty_factor * max(0,
+                                                               duration + distance_to_depot - self.ga.vrp_instance.max_duration_of_a_route) \
+                       + self.ga.capacity_penalty_factor * max(0,
+                                                               current_capacity - self.ga.vrp_instance.max_capacity) \
+                       + self.ga.time_window_penalty * sum_time_warp
+                # if new solution better than current then update labels
+                if p1[t] + cost + distance_to_depot < p1[i]:
+                    p1[i] = p1[t] + cost + distance_to_depot
+                    pred[i] = t
+                    distance_list[i] = distance + distance_to_depot
+                    capacity_list[i] = current_capacity
+                    time_list[i] = time_i
+                    time_warp_list[i] = sum_time_warp
+                    duration_list[i] = duration + distance_to_depot
+
+                i += 1
+
+                # Bounds check
+                if customer_offset + (i - 1) < self.ga.vrp_instance.n_depots + self.ga.vrp_instance.n_customers:
+                    try:
+                        customer_value_i = chromosome[customer_offset + (i - 1)]
+                        customer_i: Customer = self.ga.vrp_instance.customers[customer_value_i - 1]
+                    except IndexError:
+                        break
+                else:
+                    break
 
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list

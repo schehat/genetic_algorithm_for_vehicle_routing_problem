@@ -216,9 +216,8 @@ class Education:
 
         # Run neighborhood search
         for _ in range(self.neighborhood_iterations):
-            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
+            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, best_chromosome)
             chromosome_candidate = neighborhood_search(best_chromosome.copy(), self.customer_index_list)
-            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, chromosome)
             fitness_candidate = self.ga.decode_chromosome(chromosome_candidate)[0]
 
             # Update the best candidate and best fitness if needed
