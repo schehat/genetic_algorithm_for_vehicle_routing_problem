@@ -36,7 +36,7 @@ class GA:
     generation = 0
     diversify_counter = 0
     no_improvement_counter = 0
-    MAX_RUNNING_TIME_IN_S = 3600 * 1/12
+    MAX_RUNNING_TIME_IN_S = 3600 * 1.0
     start_time = None
     end_time = None
     children = None
@@ -79,7 +79,11 @@ class GA:
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
-        self.file_prefix_name = f"../BA_results/{instance_name}/initial=random/{self.TIMESTAMP}"
+        if instance_name == "pr01":
+            self.MAX_RUNNING_TIME_IN_S = 3600 * 1/12
+        else:
+            self.MAX_RUNNING_TIME_IN_S = 3600 * 1.0
+        self.file_prefix_name = f"../BA_results/{instance_name}/initial=heuristic/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -170,8 +174,8 @@ class GA:
         """
 
         self.start_time = time.time()
-        # self.initial_population(self)
-        initial_population_random(self, 0, self.population_size)
+        self.initial_population(self)
+        # initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
