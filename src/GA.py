@@ -72,7 +72,7 @@ class GA:
                  time_window_penalty: float = 5.0,
                  penalty_factor: float = 0.05,
 
-                 target_feasible_proportion: float = 0.2
+                 target_feasible_proportion: float = 0.25
                  ):
 
         self.vrp_instance: VRPInstance = vrp_instance
@@ -81,9 +81,11 @@ class GA:
         self.mutation = Mutation(self.vrp_instance)
         if instance_name == "pr01":
             self.MAX_RUNNING_TIME_IN_S = 3600 * 1/12
+        elif instance_name == "pr02":
+            self.MAX_RUNNING_TIME_IN_S = 3600 * 3/12
         else:
-            self.MAX_RUNNING_TIME_IN_S = 3600 * 1.0
-        self.file_prefix_name = f"../BA_results/{instance_name}/initial=heuristic/{self.TIMESTAMP}"
+            self.MAX_RUNNING_TIME_IN_S = 3600 * 2/12
+        self.file_prefix_name = f"../BA_results/{instance_name}/initial=random/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -174,8 +176,8 @@ class GA:
         """
 
         self.start_time = time.time()
-        self.initial_population(self)
-        # initial_population_random(self, 0, self.population_size)
+        # self.initial_population(self)
+        initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
@@ -230,7 +232,6 @@ class GA:
         #                                     30,
         #                                     2, 47, 24, 12, 38, 40, 21, 43
         #                                     ]
-        #
         # total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(self.population[0]["chromosome"])
         # self.population[0]["fitness"] = total_fitness
         # self.population[0]["distance"] = total_distance
@@ -542,6 +543,7 @@ class GA:
             new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
         total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
         old_ind_fitness = best_ind["fitness"]
+        self.education_old_fitness = best_ind["fitness"]
         print(best_ind["fitness"], new_fitness, total_fitness)
         if total_fitness - 0.00001 < old_ind_fitness:
             best_ind["chromosome"] = new_chromosome
@@ -550,8 +552,6 @@ class GA:
             best_ind["capacity_violation"] = total_capacity_violation
             best_ind["time_warp"] = total_time_warp
             best_ind["duration_violation"] = total_duration_violation
-        self.education_old_fitness = best_ind["fitness"]
-
         population_indices = list(range(self.population_size))
         shuffle(population_indices)
 
