@@ -55,7 +55,7 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.3,
+                 p_m: float = 0.25,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
@@ -72,7 +72,7 @@ class GA:
                  time_window_penalty: float = 5.0,
                  penalty_factor: float = 0.05,
 
-                 target_feasible_proportion: float = 0.25
+                 target_feasible_proportion: float = 0.5
                  ):
 
         self.vrp_instance: VRPInstance = vrp_instance
@@ -80,12 +80,12 @@ class GA:
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
         if instance_name == "pr01":
-            self.MAX_RUNNING_TIME_IN_S = 3600 * 1/12
+            self.max_generations = 150
         elif instance_name == "pr02":
-            self.MAX_RUNNING_TIME_IN_S = 3600 * 3/12
+            self.MAX_RUNNING_TIME_IN_S = 30
         else:
-            self.MAX_RUNNING_TIME_IN_S = 3600 * 2/12
-        self.file_prefix_name = f"../BA_results/{instance_name}/initial=random/{self.TIMESTAMP}"
+            self.MAX_RUNNING_TIME_IN_S = 150
+        self.file_prefix_name = f"../BA_results/{instance_name}/p_m={p_m}/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -175,13 +175,13 @@ class GA:
         Execution of FISAGALS
         """
 
-        self.start_time = time.time()
-        # self.initial_population(self)
-        initial_population_random(self, 0, self.population_size)
+        self.initial_population(self)
+        # initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
         # Main GA loop
+        self.start_time = time.time()
         self.run_generations(self.generation, self.max_generations)
 
         condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
