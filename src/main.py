@@ -57,7 +57,6 @@ if __name__ == "__main__":
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
-    # pr 01 200G, 02 900G, 03 500G
     # Set GA parameters
     POPULATION_SIZE = 50
     CROSSOVER_RATE = 0.5

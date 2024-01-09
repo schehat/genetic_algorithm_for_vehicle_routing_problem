@@ -55,7 +55,7 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.25,
+                 p_m: float = 0.2,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
@@ -72,7 +72,7 @@ class GA:
                  time_window_penalty: float = 5.0,
                  penalty_factor: float = 0.05,
 
-                 target_feasible_proportion: float = 0.5
+                 target_feasible_proportion: float = 0.25
                  ):
 
         self.vrp_instance: VRPInstance = vrp_instance
@@ -80,12 +80,12 @@ class GA:
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
         if instance_name == "pr01":
-            self.max_generations = 150
+            max_generations = 150
         elif instance_name == "pr02":
-            self.MAX_RUNNING_TIME_IN_S = 30
-        else:
-            self.MAX_RUNNING_TIME_IN_S = 150
-        self.file_prefix_name = f"../BA_results/{instance_name}/p_m={p_m}/{self.TIMESTAMP}"
+            max_generations = 30
+        elif instance_name == "pr07":
+            max_generations = 150
+        self.file_prefix_name = f"../BA_results/{instance_name}/p_c={p_c}/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -305,9 +305,6 @@ class GA:
             # Diversify population
             if self.diversify_counter >= self.diversify_step:
                 self.diversity_management.diversity_procedure()
-                self.do_elitism(top_infeasible_individuals)
-                self.do_elitism(top_feasible_individuals)
-                self.do_elitism(np.array([best_ind]))
 
             self.end_time = time.time()
             minutes, seconds = divmod(self.end_time - self.start_time, 60)
@@ -510,10 +507,6 @@ class GA:
                     self.mutation.inversion(self.children[i])
                 elif self.p_inversion <= rand_num <= self.p_insertion:
                     self.mutation.insertion(self.children[i])
-                else:
-                    self.population[i]["chromosome"] = self.children[i]
-                    two_opt(self, self.population[i])
-                    self.children[i] = self.population[i]["chromosome"]
 
             # if random() < self.p_education:
             #     try:
