@@ -104,7 +104,7 @@ class Split:
 
                 current_capacity += customer_i.demand
                 if i == t + 1:
-                    distance_to_customer = euclidean_distance(vehicle_i_depot, customer_i)
+                    distance_to_customer = self.ga.graph.shortest_path_between_two_nodes((vehicle_i_depot.x, vehicle_i_depot.y), (customer_i.x, customer_i.y))
                     distance = distance_to_customer
                     time_i = customer_i.start_time_window
 
@@ -113,7 +113,7 @@ class Split:
                 else:
                     customer_value_pre_i = chromosome[customer_offset + (i - 1 - 1)]
                     customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
-                    distance_to_customer = euclidean_distance(customer_pre_i, customer_i)
+                    distance_to_customer = self.ga.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (customer_i.x, customer_i.y))
                     distance += distance_to_customer
 
                     # Late arrival => time warp
@@ -129,7 +129,7 @@ class Split:
                     else:
                         time_i += customer_pre_i.service_duration + distance_to_customer
 
-                distance_to_depot = euclidean_distance(customer_i, vehicle_i_depot)
+                distance_to_depot = self.ga.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (vehicle_i_depot.x, vehicle_i_depot.y))
                 duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                 cost = distance \
                        + self.ga.duration_penalty_factor * max(0,

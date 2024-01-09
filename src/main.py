@@ -53,7 +53,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_NAME = "pr01"
+    INSTANCE_NAME = "pr02"
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 

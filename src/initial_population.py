@@ -124,18 +124,9 @@ def wright_clark_savings(ga: "GA", depot_customer_order: np.ndarray, routing_res
                 customer_i = ga.vrp_instance.customers[customer_i_id - 1]
                 customer_j = ga.vrp_instance.customers[customer_j_id - 1]
 
-                distance_d_i = euclidean(
-                    (depot.x, depot.y),
-                    (customer_i.x, customer_i.y)
-                )
-                distance_d_j = euclidean(
-                    (depot.x, depot.y),
-                    (customer_j.x, customer_j.y)
-                )
-                distance_i_j = euclidean(
-                    (customer_i.x, customer_i.y),
-                    (customer_j.x, customer_j.y)
-                )
+                distance_d_i = ga.graph.shortest_path_between_two_nodes((depot.x, depot.y), (customer_i.x, customer_i.y))
+                distance_d_j = ga.graph.shortest_path_between_two_nodes((depot.x, depot.y), (customer_j.x, customer_j.y))
+                distance_i_j = ga.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (customer_j.x, customer_j.y))
                 saving = distance_d_i + distance_d_j - distance_i_j
 
                 # Update savings_list

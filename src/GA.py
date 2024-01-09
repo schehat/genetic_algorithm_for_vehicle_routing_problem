@@ -12,6 +12,7 @@ from enums import Purpose
 from src.distance_measurement import euclidean_distance
 from src.diversity_management import DiversityManagement
 from src.education import Education
+from src.graph import Graph
 from src.initial_population import initial_population_random
 from src.local_search import two_opt_single, two_opt_random, two_opt
 from src.split import Split
@@ -54,7 +55,7 @@ class GA:
 
                  tournament_size: int = 2,
                  n_elite: int = 8,
-                 p_c: float = 0.9,
+                 p_c: float = 1.0,
                  p_m: float = 0.2,
                  p_education: float = 0.0,
 
@@ -90,6 +91,12 @@ class GA:
         self.split = Split(self)
         self.education = Education(self)
         self.diversity_management = DiversityManagement(self)
+        # Concatenate customer and depot coordinates to form the points array
+        customer_coordinates = np.array([[customer.x, customer.y] for customer in self.vrp_instance.customers])
+        depot_coordinates = np.array([[depot.x, depot.y] for depot in self.vrp_instance.depots])
+        points = np.concatenate((customer_coordinates, depot_coordinates), axis=0)
+        self.graph = Graph(self, points)
+
         self.max_generations = max_generations
         self.initial_population = initial_population
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
@@ -255,7 +262,8 @@ class GA:
 
             # Inverse condition
             infeasible_individuals = self.population[~condition]
-            top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite - len(top_feasible_individuals)]
+            top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[
+                                           :self.n_elite - len(top_feasible_individuals)]
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             self.selection_method(self.population, self.tournament_size)
@@ -290,7 +298,8 @@ class GA:
             self.do_elitism(np.array([best_ind]))
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
                 self.fitness_stats[self.generation]["min"] = best_ind["fitness"]
-                if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (best_ind["duration_violation"]) == 0:
+                if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (
+                best_ind["duration_violation"]) == 0:
                     self.fitness_stats[self.generation]["min_feasible"] = best_ind["fitness"]
 
             min_current_fitness = self.fitness_stats[self.generation]["min"]
@@ -534,7 +543,8 @@ class GA:
             new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
         else:
             new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
-        total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+        total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
+            new_chromosome)
         old_ind_fitness = best_ind["fitness"]
         self.education_old_fitness = best_ind["fitness"]
         print(best_ind["fitness"], new_fitness, total_fitness)
@@ -554,13 +564,15 @@ class GA:
             individual = self.population[i]
 
             # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness:  # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
+            if individual["fitness"] == best_ind["fitness"] or individual[
+                "fitness"] == old_ind_fitness:  # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
                 continue
             # print(f"RANDOM index: {i},  {individual}")
             counter += 1
             new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
 
-            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(
+                new_chromosome)
             print(individual["fitness"], new_fitness, total_fitness)
             if total_fitness - 0.00001 < individual["fitness"] and abs(total_fitness - old_ind_fitness) > 0.00001:
                 individual["chromosome"] = new_chromosome
@@ -657,7 +669,7 @@ class GA:
                        f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
                        f'\np_c: {self.p_c}, p_m: {self.p_m}, NOT YET p_education: {self.p_education}'
                        f'\ntournament_size: {self.tournament_size}, n_elite: {self.n_elite}'
-                       f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival}'                       
+                       f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival}'
                        f'\nkill clone step: {self.kill_clone_step}'
                        f'\ndiversify_step: {self.diversify_step}, diversify_step: {self.diversify_step}, p_diversify_survival: {self.p_diversify_survival}'
                        f'\nn_closest_neighbors: {self.n_closest_neighbors}, diversity_weight: {self.diversity_weight}, distance_method: {self.distance_method.__name__}'

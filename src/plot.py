@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from numpy import ndarray
 
 from enums import Purpose
+from src.utility import save_plot
 from vrp import Depot
 
 
@@ -50,11 +51,11 @@ class Plot:
         plt.title('Fitness over Generations')
         plt.grid(True)
         plt.legend()
-        self.save_plot(f"{self.ga.file_prefix_name}", f"fitness")
+        save_plot(f"{self.ga.file_prefix_name}", f"fitness")
 
         plt.plot(x_intervals, avg_fitness_intervals, marker='o', label='Avg Fitness')
         plt.legend()
-        self.save_plot(f"{self.ga.file_prefix_name}", f"fitness_with_avg")
+        save_plot(f"{self.ga.file_prefix_name}", f"fitness_with_avg")
         # plt.show()
 
     def plot_routes(self, individual: ndarray, width=12, height=10):
@@ -76,7 +77,7 @@ class Plot:
             plt.title(f'Depot Route Visualization {depot_i + 1}')
             plt.grid(True)
             plt.legend()
-            self.save_plot(f"{self.ga.file_prefix_name}", f"depot_route{depot_i + 1}")
+            save_plot(f"{self.ga.file_prefix_name}", f"depot_route{depot_i + 1}")
             # plt.show()
 
         # Plot for every vehicle it routes
@@ -91,7 +92,7 @@ class Plot:
         plt.title(f'Depot Route Visualization Complete')
         plt.grid(True)
         plt.legend()
-        self.save_plot(f"{self.ga.file_prefix_name}", f"depot_complete_routes")
+        save_plot(f"{self.ga.file_prefix_name}", f"depot_complete_routes")
         plt.close('all')
         # plt.show()
 
@@ -131,16 +132,3 @@ class Plot:
                 mid_y = (y_pos[j] + y_pos[j + 1]) / 2
                 plt.text(mid_x, mid_y, f'{j + 1}', fontsize=8, ha='center', va='center',
                          bbox=dict(boxstyle='round', pad=0.1, edgecolor='black', facecolor='#ffffff'))
-
-    @staticmethod
-    def save_plot(location: str, file_name: str):
-        """
-        Saves plots at a given location
-        param: plotting - pyplot object
-        param: location - destination of file to be stored
-        param: file_name - name of file
-        """
-
-        os.makedirs(location, exist_ok=True)
-        file_name = os.path.join(location, file_name)
-        plt.savefig(file_name)
