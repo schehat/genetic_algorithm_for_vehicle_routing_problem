@@ -55,11 +55,25 @@ def hamming_distance(chromosome_a: ndarray, chromosome_b: ndarray) -> int:
     return hamming_distance
 
 
-def euclidean_distance(obj1, obj2) -> float:
-    """
-    Calculate fitness for a single chromosome
-    param: obj1 and obj2 - Customers or Depots
-    return: distance
-    """
+class EuclideanDistance:
+    def __init__(self, ga: "GA"):
+        self.shortest_paths_cache = {}
 
-    return np.linalg.norm(np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
+    def euclidean_distance(self, obj1, obj2) -> float:
+        """
+        Calculate fitness for a single chromosome
+        param: obj1 and obj2 - Customers or Depots
+        return: distance
+        """
+        obj1_cord = (obj1.x, obj1.y)
+        obj2_cord = (obj2.x, obj2.y)
+        if (obj1_cord, obj2_cord) in self.shortest_paths_cache:
+            # If the result is already cached, return it
+            return self.shortest_paths_cache[(obj1_cord, obj2_cord)]
+
+        dx = obj1.x - obj2.x
+        dy = obj1.y - obj2.y
+        distance = (dx**2 + dy**2)**0.5
+        self.shortest_paths_cache[(obj1_cord, obj2_cord)] = distance
+
+        return distance

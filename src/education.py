@@ -35,7 +35,10 @@ class Education:
 
         if not limited:
             self.neighborhood_iterations = int(0.1 * self.ga.vrp_instance.n_customers)
+            self.pattern_improvement()
+            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.current_chromosome)
             self.route_improvement(self.current_chromosome.copy())
+            self.pattern_improvement()
         else:
             self.neighborhood_iterations = int(0.3 * self.ga.vrp_instance.n_customers)
         self.pattern_improvement()

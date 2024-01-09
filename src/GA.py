@@ -9,7 +9,7 @@ from numpy import ndarray
 
 from mutation import Mutation
 from enums import Purpose
-from src.distance_measurement import euclidean_distance
+from src.distance_measurement import EuclideanDistance
 from src.diversity_management import DiversityManagement
 from src.education import Education
 from src.initial_population import initial_population_random
@@ -55,13 +55,13 @@ class GA:
                  tournament_size: int = 2,
                  n_elite: int = 8,
                  p_c: float = 0.9,
-                 p_m: float = 0.2,
+                 p_m: float = 0.3,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 10,
+                 survivor_selection_step: int = 20,
                  p_selection_survival: float = 0.70,
-                 kill_clone_step: int = 5,
+                 kill_clone_step: int = 10,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
@@ -82,7 +82,7 @@ class GA:
         if instance_name == "pr01":
             max_generations = 150
         elif instance_name == "pr02":
-            max_generations = 30
+            max_generations = 50
         elif instance_name == "pr07":
             max_generations = 150
         self.file_prefix_name = f"../BA_results/{instance_name}/p_c={p_c}/{self.TIMESTAMP}"
@@ -90,6 +90,7 @@ class GA:
         self.split = Split(self)
         self.education = Education(self)
         self.diversity_management = DiversityManagement(self)
+        self.euclidean_distance = EuclideanDistance(self)
         self.max_generations = max_generations
         self.initial_population = initial_population
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
@@ -572,7 +573,7 @@ class GA:
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
-            if counter >= 2:
+            if counter >= 4:
                 break
 
         return best_ind

@@ -124,18 +124,9 @@ def wright_clark_savings(ga: "GA", depot_customer_order: np.ndarray, routing_res
                 customer_i = ga.vrp_instance.customers[customer_i_id - 1]
                 customer_j = ga.vrp_instance.customers[customer_j_id - 1]
 
-                distance_d_i = euclidean(
-                    (depot.x, depot.y),
-                    (customer_i.x, customer_i.y)
-                )
-                distance_d_j = euclidean(
-                    (depot.x, depot.y),
-                    (customer_j.x, customer_j.y)
-                )
-                distance_i_j = euclidean(
-                    (customer_i.x, customer_i.y),
-                    (customer_j.x, customer_j.y)
-                )
+                distance_d_i = ga.euclidean_distance.euclidean_distance(depot, customer_i)
+                distance_d_j = ga.euclidean_distance.euclidean_distance(depot, customer_j)
+                distance_i_j = ga.euclidean_distance.euclidean_distance(customer_i, customer_j)
                 saving = distance_d_i + distance_d_j - distance_i_j
 
                 # Update savings_list
@@ -228,13 +219,9 @@ def nearest_neighbor_heuristic(ga: "GA", routing_result: list):
                 while route:
                     # Find the nearest neighbor to the last customer in the new route
                     last_customer = new_route[-1]
-                    nearest_neighbor = min(route, key=lambda customer_id: euclidean(
-                        (
-                            ga.vrp_instance.customers[last_customer - 1].x,
-                            ga.vrp_instance.customers[last_customer - 1].y),
-                        (
-                            ga.vrp_instance.customers[customer_id - 1].x,
-                            ga.vrp_instance.customers[customer_id - 1].y)
+                    nearest_neighbor = min(route, key=lambda customer_id: ga.euclidean_distance.euclidean_distance(
+                            ga.vrp_instance.customers[last_customer - 1],
+                            ga.vrp_instance.customers[customer_id - 1],
                     ))
                     new_route.append(nearest_neighbor)
                     route.remove(nearest_neighbor)
