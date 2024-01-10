@@ -54,14 +54,14 @@ class GA:
 
                  tournament_size: int = 2,
                  n_elite: int = 8,
-                 p_c: float = 0.9,
-                 p_m: float = 0.3,
+                 p_c: float = 0.0,
+                 p_m: float = 0.2,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 20,
+                 survivor_selection_step: int = 10,
                  p_selection_survival: float = 0.70,
-                 kill_clone_step: int = 10,
+                 kill_clone_step: int = 5,
                  diversify_step: float = 20,
                  p_diversify_survival: float = 0.3,
 
@@ -82,7 +82,7 @@ class GA:
         if instance_name == "pr01":
             max_generations = 150
         elif instance_name == "pr02":
-            max_generations = 50
+            max_generations = 30
         elif instance_name == "pr07":
             max_generations = 150
         self.file_prefix_name = f"../BA_results/{instance_name}/p_c={p_c}/{self.TIMESTAMP}"
@@ -573,7 +573,7 @@ class GA:
 
             # print(f"NEW RANDOM index: {i},  {individual}")
 
-            if counter >= 4:
+            if counter >= 2:
                 break
 
         return best_ind
