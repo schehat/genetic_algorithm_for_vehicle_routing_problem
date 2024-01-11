@@ -54,15 +54,15 @@ class GA:
 
                  tournament_size: int = 2,
                  n_elite: int = 8,
-                 p_c: float = 0.0,
+                 p_c: float = 0.75,
                  p_m: float = 0.2,
                  p_education: float = 0.0,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 10,
+                 survivor_selection_step: int = 100,
                  p_selection_survival: float = 0.70,
-                 kill_clone_step: int = 5,
-                 diversify_step: float = 20,
+                 kill_clone_step: int = 50,
+                 diversify_step: float = 200,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
@@ -79,13 +79,13 @@ class GA:
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
-        if instance_name == "pr01":
-            max_generations = 150
-        elif instance_name == "pr02":
-            max_generations = 30
-        elif instance_name == "pr07":
-            max_generations = 150
-        self.file_prefix_name = f"../BA_results/{instance_name}/p_c={p_c}/{self.TIMESTAMP}"
+        # if instance_name == "pr01":
+        #     max_generations = 150
+        # elif instance_name == "pr02":
+        #     max_generations = 30
+        # elif instance_name == "pr07":
+        #     max_generations = 150
+        self.file_prefix_name = f"../BA_results/{instance_name}/no_ls/{self.TIMESTAMP}"
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -288,7 +288,7 @@ class GA:
             elif (self.generation + 1) % self.kill_clone_step == 0:
                 self.diversity_management.kill_clones()
 
-            self.do_elitism(np.array([best_ind]))
+            # self.do_elitism(np.array([best_ind]))
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
                 self.fitness_stats[self.generation]["min"] = best_ind["fitness"]
                 if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (best_ind["duration_violation"]) == 0:
@@ -518,63 +518,63 @@ class GA:
             #         print("Education Error")
 
     def education_best_individuals(self):
-        condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
-                self.population["duration_violation"] == 0)
-        feasible_individuals = self.population[condition]
-        if len(feasible_individuals) > 0:
-            top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
-            best_ind = feasible_individuals[top_feasible_individual]
-        else:
-            infeasible_individuals = self.population[~condition]
-            top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
-            best_ind = infeasible_individuals[top_infeasible_individual_i]
-
+        # condition = (self.population["capacity_violation"] == 0) & (self.population["time_warp"] == 0) & (
+        #         self.population["duration_violation"] == 0)
+        # feasible_individuals = self.population[condition]
+        # if len(feasible_individuals) > 0:
+        #     top_feasible_individual = np.argsort(feasible_individuals["fitness"])[0]
+        #     best_ind = feasible_individuals[top_feasible_individual]
+        # else:
+        #     infeasible_individuals = self.population[~condition]
+        #     top_infeasible_individual_i = np.argsort(infeasible_individuals["fitness"])[0]
+        #     best_ind = infeasible_individuals[top_infeasible_individual_i]
+        best_ind = self.population[np.argsort(self.population["fitness"])[0]]
         # best_ind = self.population[np.argsort(self.population["fitness"])[0]]
-        diff_fitness = abs(self.education_old_fitness - best_ind["fitness"])
-        if diff_fitness > 0.0001:
-            new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
-        else:
-            new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
-        total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
-        old_ind_fitness = best_ind["fitness"]
-        self.education_old_fitness = best_ind["fitness"]
-        print(best_ind["fitness"], new_fitness, total_fitness)
-        if total_fitness - 0.00001 < old_ind_fitness:
-            best_ind["chromosome"] = new_chromosome
-            best_ind["fitness"] = total_fitness
-            best_ind["distance"] = total_distance
-            best_ind["capacity_violation"] = total_capacity_violation
-            best_ind["time_warp"] = total_time_warp
-            best_ind["duration_violation"] = total_duration_violation
-        population_indices = list(range(self.population_size))
-        shuffle(population_indices)
-
-        # Count educations ran, limit to 2
-        counter = 0
-        for i in population_indices:
-            individual = self.population[i]
-
-            # Same individuals skip
-            if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness:  # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
-                continue
-            # print(f"RANDOM index: {i},  {individual}")
-            counter += 1
-            new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
-
-            total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
-            print(individual["fitness"], new_fitness, total_fitness)
-            if total_fitness - 0.00001 < individual["fitness"] and abs(total_fitness - old_ind_fitness) > 0.00001:
-                individual["chromosome"] = new_chromosome
-                individual["fitness"] = total_fitness
-                individual["distance"] = total_distance
-                individual["capacity_violation"] = total_capacity_violation
-                individual["time_warp"] = total_time_warp
-                individual["duration_violation"] = total_duration_violation
-
-            # print(f"NEW RANDOM index: {i},  {individual}")
-
-            if counter >= 2:
-                break
+        # diff_fitness = abs(self.education_old_fitness - best_ind["fitness"])
+        # if diff_fitness > 0.0001:
+        #     new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"])
+        # else:
+        #     new_chromosome, new_fitness = self.education.run(best_ind["chromosome"], best_ind["fitness"], limited=True)
+        # total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+        # old_ind_fitness = best_ind["fitness"]
+        # self.education_old_fitness = best_ind["fitness"]
+        # print(best_ind["fitness"], new_fitness, total_fitness)
+        # if total_fitness - 0.00001 < old_ind_fitness:
+        #     best_ind["chromosome"] = new_chromosome
+        #     best_ind["fitness"] = total_fitness
+        #     best_ind["distance"] = total_distance
+        #     best_ind["capacity_violation"] = total_capacity_violation
+        #     best_ind["time_warp"] = total_time_warp
+        #     best_ind["duration_violation"] = total_duration_violation
+        # population_indices = list(range(self.population_size))
+        # shuffle(population_indices)
+        #
+        # # Count educations ran, limit to 2
+        # counter = 0
+        # for i in population_indices:
+        #     individual = self.population[i]
+        #
+        #     # Same individuals skip
+        #     if individual["fitness"] == best_ind["fitness"] or individual["fitness"] == old_ind_fitness:  # or individual["fitness"] > self.fitness_stats[self.generation]["avg"]:
+        #         continue
+        #     # print(f"RANDOM index: {i},  {individual}")
+        #     counter += 1
+        #     new_chromosome, new_fitness = self.education.run(individual["chromosome"], individual["fitness"])
+        #
+        #     total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(new_chromosome)
+        #     print(individual["fitness"], new_fitness, total_fitness)
+        #     if total_fitness - 0.00001 < individual["fitness"] and abs(total_fitness - old_ind_fitness) > 0.00001:
+        #         individual["chromosome"] = new_chromosome
+        #         individual["fitness"] = total_fitness
+        #         individual["distance"] = total_distance
+        #         individual["capacity_violation"] = total_capacity_violation
+        #         individual["time_warp"] = total_time_warp
+        #         individual["duration_violation"] = total_duration_violation
+        #
+        #     # print(f"NEW RANDOM index: {i},  {individual}")
+        #
+        #     if counter >= 2:
+        #         break
 
         return best_ind
 
