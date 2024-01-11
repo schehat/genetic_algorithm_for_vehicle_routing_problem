@@ -54,7 +54,7 @@ class GA:
 
                  tournament_size: int = 2,
                  n_elite: int = 8,
-                 p_c: float = 0.0,
+                 p_c: float = 0.5,
                  p_m: float = 0.2,
                  p_education: float = 0.0,
 

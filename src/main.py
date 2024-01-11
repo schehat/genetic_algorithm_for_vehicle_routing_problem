@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from GA import GA
 from fitness_scaling import power_rank
@@ -9,6 +10,7 @@ from local_search import two_opt
 from initial_population import initial_population_grouping_savings_nnh, initial_population_random
 from src.distance_measurement import broken_pairs_distance
 from vrp import Customer, Depot, VRPInstance
+from sklearn.cluster import KMeans
 
 
 def read_cordeau_instance(file_path: str) -> VRPInstance:
@@ -45,6 +47,47 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
             depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[-2]), int(data[-1]))
             depots[i] = depot
 
+    customer_coordinates = np.array([[customer.x, customer.y] for customer in customers])
+    depot_coordinates = np.array([[depot.x, depot.y] for depot in depots])
+    points = np.concatenate((customer_coordinates, depot_coordinates), axis=0)
+
+    # Specify the number of clusters (k)
+    k = n_depots
+
+    # Initialize the KMeans model
+    kmeans = KMeans(n_clusters=k)
+
+    # Fit the model to the data
+    kmeans.fit(points)
+
+    # Get the cluster centers and labels
+    centroids = kmeans.cluster_centers_
+    labels = kmeans.labels_
+
+    # Separate customer and depot points
+    customer_points = points[:-n_depots]
+    depot_points = points[-n_depots:]
+
+    # Plot the customer positions with circle markers and colors based on cluster labels
+    plt.scatter(customer_points[:, 0], customer_points[:, 1], c=labels[:-n_depots], cmap='viridis', label='Customers', marker='o')
+
+    # Plot the depot positions with bigger circles, black edge, and colors based on cluster labels
+    plt.scatter(depot_points[:, 0], depot_points[:, 1], c=labels[-n_depots:], cmap='viridis', label='Depots', marker='o', s=100, edgecolors='black')
+
+    # Plot the cluster centers with red 'X' markers
+    plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='X', label='Cluster Centers')
+
+    print("Cluster Centers:")
+    print(centroids)
+    print("\nLabels:")
+    print(labels)
+
+    plt.title('Customer and Depot Clustering with K-Means')
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.legend()
+    plt.show()
+
     return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route)
 
 
@@ -53,7 +96,7 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_NAME = "pr07"
+    INSTANCE_NAME = "pr01"
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
