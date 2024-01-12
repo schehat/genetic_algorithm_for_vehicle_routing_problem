@@ -24,7 +24,6 @@ def broken_pairs_distance(chromosome_a: ndarray, chromosome_b: ndarray, n_depots
         if (index_b1 + 1) % n != index_b2:
             broken_pairs_count += 1
 
-    # NOT CLEAN HAMMING FOR DEPOT INFORMATION
     for i in range(n_depots):
         customer_a_i = chromosome_a[i]
         customer_b_i = chromosome_b[i]
@@ -75,6 +74,5 @@ class EuclideanDistance:
         dy = obj1.y - obj2.y
         distance = (dx**2 + dy**2)**0.5
         self.shortest_paths_cache[(obj1_cord, obj2_cord)] = distance
-        # np.linalg.norm(np.array([obj1.x, obj1.y]) - np.array([obj2.x, obj2.y]))
 
         return distance

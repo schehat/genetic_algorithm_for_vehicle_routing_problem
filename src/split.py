@@ -1,5 +1,3 @@
-import itertools
-from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple
 
 import numpy as np
@@ -35,29 +33,6 @@ class Split:
             time_complete += time_list
             time_warp_complete += time_warp_list
             duration_complete += duration_list
-
-        # Parallel execution. IS SLOWER AT THE MOMENT MIGHT CHANGE WITH BIGGER BENCHMARKS
-        # with ThreadPoolExecutor() as executor:
-        #     results = [executor.submit(self.split_single_depot, chromosome, depot_i, customer_index_list[x]) for
-        #                x, depot_i in enumerate(range(self.ga.vrp_instance.n_depots))]
-        #     for future in results:
-        #         p, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list = future.result()
-        #         p_complete += p
-        #         pred_complete += pred
-        #         distance_complete += distance_list
-        #         capacity_complete += capacity_list
-        #         time_complete += time_list
-        #         time_warp_complete += time_warp_list
-        #         duration_complete += duration_list
-
-        # Convert list to array for performance
-        # self.ga.p_complete = np.array(p_complete)
-        # self.ga.pred_complete = np.array(pred_complete)
-        # self.ga.distance_complete = np.array(distance_complete)
-        # self.ga.capacity_complete = np.array(capacity_complete)
-        # self.ga.time_complete = np.array(time_complete)
-        # self.ga.time_warp_complete = np.array(time_warp_complete)
-        # self.ga.duration_complete = np.array(duration_complete)
 
         return np.array(p_complete), np.array(pred_complete), np.array(distance_complete), np.array(capacity_complete), np.array(time_complete), np.array(time_warp_complete), np.array(duration_complete)
 

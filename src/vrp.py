@@ -30,15 +30,6 @@ class Depot:
         self.end_time_window = end_time_window
 
 
-# TODO
-class Vehicle:
-    """
-    Vehicle information
-    """
-
-    pass
-
-
 class VRPInstance:
     """
     VRP Instance representation providing all the necessary information excluding specific parameters for the genetic algorithm

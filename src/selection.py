@@ -23,7 +23,7 @@ def n_tournaments(population: ndarray, n: int):
     def tournament(i):
         # Select the winner based on fitness
         competitors = np.random.choice(len_population, n, replace=False)
-        winner = min(competitors, key=lambda x: population_copy[x]["biased_fitness"])
+        winner = min(competitors, key=lambda x: population_copy[x]["fitness"])
         selected_individual = population_copy[winner]
 
         # Safely increment the counter and update the population
@@ -34,20 +34,3 @@ def n_tournaments(population: ndarray, n: int):
     # Parallelization step calling tournament
     with ThreadPoolExecutor() as executor:
         list(executor.map(tournament, range(len_population)))
-
-
-# TODO
-def fitness_proportionate_selection():
-    pass
-
-
-def stochastic_universal_sampling():
-    pass
-
-
-def linear_rank_selection():
-    pass
-
-
-def power_rank_selection():
-    pass

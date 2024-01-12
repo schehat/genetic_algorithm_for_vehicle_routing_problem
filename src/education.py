@@ -35,14 +35,17 @@ class Education:
 
         if not limited:
             self.neighborhood_iterations = int(0.1 * self.ga.vrp_instance.n_customers)
+            self.pattern_improvement()
+            self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.current_chromosome.copy())
             self.route_improvement(self.current_chromosome.copy())
+            self.pattern_improvement()
         else:
             self.neighborhood_iterations = int(0.3 * self.ga.vrp_instance.n_customers)
-        self.pattern_improvement()
+            self.pattern_improvement()
 
         return self.current_chromosome, self.current_fitness
 
-    def route_improvement(self, chromosome: ndarray, limited=False):
+    def route_improvement(self, chromosome: ndarray):
         """
         Route improvement deals with the configuration of the customers with the route of a single depot.
         Here is the management of the all the depots held for configuring the new chromosome
@@ -52,10 +55,7 @@ class Education:
         chromosome_complete = []
 
         for depot_i in range(self.ga.vrp_instance.n_depots):
-            if limited:
-                depot_i, single_chromosome, fitness = self.route_improvement_single_depot_limited(depot_i, chromosome, self.customer_index_list)
-            else:
-                depot_i, single_chromosome, fitness = self.route_improvement_single_depot(depot_i, chromosome, self.customer_index_list)
+            depot_i, single_chromosome, fitness = self.route_improvement_single_depot(depot_i, chromosome, self.customer_index_list)
             fitness_complete += fitness
             chromosome_complete.append((depot_i, single_chromosome))
 

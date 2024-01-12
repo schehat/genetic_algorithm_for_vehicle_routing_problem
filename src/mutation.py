@@ -20,8 +20,8 @@ class Mutation:
         self.END_SECOND_PART = self.vrp_instance.n_depots + vrp_instance.n_customers
         self.minimum_serving_customers_per_vehicle = minimum_serving_customers_per_vehicle
 
-        MIN_CUSTOMER = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
-        MAX_CUSTOMER = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
+        # MIN_CUSTOMER = floor((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 0.5)
+        # MAX_CUSTOMER = ceil((self.vrp_instance.n_customers / self.vrp_instance.n_depots) * 2.0)
 
     def uniform(self, chromosome: np.ndarray):
         """
@@ -66,7 +66,6 @@ class Mutation:
                 chromosome[random_index] += 1
                 diff += 1
 
-    # TODO: SWAP SEQUENCE
     def swap(self, chromosome: np.ndarray):
         """
         Applying swap mutation to second part of chromosome in place

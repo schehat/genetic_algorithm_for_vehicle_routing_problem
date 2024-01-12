@@ -3,8 +3,6 @@ import random
 import numpy as np
 from numpy import ndarray
 
-from scipy.spatial.distance import euclidean
-
 
 def initial_population_random(ga: "GA", start_pos: int, end_pos):
     """
@@ -220,8 +218,8 @@ def nearest_neighbor_heuristic(ga: "GA", routing_result: list):
                     # Find the nearest neighbor to the last customer in the new route
                     last_customer = new_route[-1]
                     nearest_neighbor = min(route, key=lambda customer_id: ga.euclidean_distance.euclidean_distance(
-                            ga.vrp_instance.customers[last_customer - 1],
-                            ga.vrp_instance.customers[customer_id - 1],
+                        ga.vrp_instance.customers[last_customer - 1],
+                        ga.vrp_instance.customers[customer_id - 1],
                     ))
                     new_route.append(nearest_neighbor)
                     route.remove(nearest_neighbor)
