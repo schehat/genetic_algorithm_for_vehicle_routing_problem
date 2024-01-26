@@ -9,7 +9,7 @@ class Customer:
     """
 
     def __init__(self, id: int, x: float, y: float, service_duration: int, demand: int,
-                 start_time_window: int, end_time_window: int):
+                 start_time_window: int, end_time_window: int, label: int = 0):
         self.id = id
         self.x = x
         self.y = y
@@ -17,6 +17,7 @@ class Customer:
         self.service_duration = service_duration
         self.start_time_window = start_time_window
         self.end_time_window = end_time_window
+        self.label = label
 
 
 class Depot:
@@ -24,12 +25,24 @@ class Depot:
     Depot information
     """
 
-    def __init__(self, id: int, x: float, y: float, start_time_window: int, end_time_window: int):
+    def __init__(self, id: int, x: float, y: float, start_time_window: int, end_time_window: int, label: int = 0):
         self.id = id
         self.x = x
         self.y = y
         self.start_time_window = start_time_window
         self.end_time_window = end_time_window
+        self.label = label
+
+
+class ChargingStation:
+    """
+    Depot information
+    """
+
+    def __init__(self, id: int, x: float, y: float):
+        self.id = id
+        self.x = x
+        self.y = y
 
 
 class VRPInstance:
