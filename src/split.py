@@ -172,6 +172,8 @@ class Split:
             time_i = 0
             sum_time_warp = 0
 
+            number_of_recharges = 0
+
             i = t + 1
 
             try:
@@ -198,6 +200,22 @@ class Split:
                     customer_pre_i: Customer = self.ga.vrp_instance.customers[customer_value_pre_i - 1]
 
                     distance_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (customer_i.x, customer_i.y))
+
+                    distance_to_recharge = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (customer_i.x, customer_i.y))
+                    # Save and reset Capacity
+                    temp_current_capacity = current_capacity
+                    current_capacity = 0
+                    for charging_station in self.ga.vrp_instance.charging_stations:
+                        distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
+                        if distance_to_charging_station < distance_to_customer:
+                            distance_to_recharge = distance_to_charging_station
+                            # If one charging station has less distance than depot then capacity will be set back to normal
+                            current_capacity = temp_current_capacity
+
+                    # Check if trip to depot or charging station necessary
+                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges:
+                        distance += distance_to_recharge
+                        number_of_recharges += 1
 
                     distance += distance_to_customer
 

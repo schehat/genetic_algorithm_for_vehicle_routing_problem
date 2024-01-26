@@ -51,7 +51,7 @@ class VRPInstance:
     """
 
     def __init__(self, n_vehicles: int, n_customers: int, n_depots: int, max_capacity: int,
-                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int, graph: Graph):
+                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int, graph: Graph, charging_stations: ndarray = None, max_distance:int = 200):
         self.n_vehicles = n_vehicles
         self.n_customers = n_customers
         self.n_depots = n_depots
@@ -60,3 +60,5 @@ class VRPInstance:
         self.depots = depots
         self.max_duration_of_a_route = max_duration_of_a_route
         self.graph = graph
+        self.charging_stations = charging_stations
+        self.max_distance = max_distance

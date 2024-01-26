@@ -52,6 +52,14 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[7]), int(data[8]))
                 depots[i] = depot
                 print(data[0], data[1], data[2], data[7], data[8])
+
+        # Create Graph
+        # Concatenate customer and depot coordinates to form the points array
+        customer_coordinates = np.array([[customer.x, customer.y] for customer in customers])
+        depot_coordinates = np.array([[depot.x, depot.y] for depot in depots])
+        points = np.concatenate((customer_coordinates, depot_coordinates), axis=0)
+        graph = Graph(points)
+
     else:
         # Read customer data
         for i, line in enumerate(lines[n_depots + 1: n_depots + 1 + n_customers]):
@@ -67,7 +75,8 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
             data = line.split()
             if len(data) >= 3:
                 # depot id is + n_customers offset, unfavorable in later stages of GA
-                depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[7]), int(data[8]), int(data[9]))
+                depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[7]), int(data[8]),
+                              int(data[9]))
                 depots[i] = depot
                 print(data[0], data[1], data[2], data[7], data[8], data[9])
 
@@ -80,12 +89,13 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 charging_stations[i] = charging_station
                 print(data[0], data[1], data[2])
 
-    # Create Graph
-    # Concatenate customer and depot coordinates to form the points array
-    customer_coordinates = np.array([[customer.x, customer.y] for customer in customers])
-    depot_coordinates = np.array([[depot.x, depot.y] for depot in depots])
-    points = np.concatenate((customer_coordinates, depot_coordinates), axis=0)
-    graph = Graph(points)
+        # Create Graph
+        # Concatenate customer and depot coordinates to form the points array
+        customer_coordinates = np.array([[customer.x, customer.y] for customer in customers])
+        depot_coordinates = np.array([[depot.x, depot.y] for depot in depots])
+        charging_coordinates = np.array([[charging.x, charging.y] for charging in charging_stations])
+        points = np.concatenate((customer_coordinates, depot_coordinates, charging_coordinates), axis=0)
+        graph = Graph(points)
 
     # Create k Cluster
     # k = n_depots
@@ -93,7 +103,12 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
     # k_means.plot_clusters()
     # k_means.adjust_benchmark_with_cluster()
 
-    return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route, graph)
+    if not file_path.endswith("afvrp"):
+        return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route,
+                           graph)
+    else:
+        return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route,
+                           graph, charging_stations)
 
 
 if __name__ == "__main__":
@@ -114,7 +129,7 @@ if __name__ == "__main__":
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH_METHOD = two_opt
     DISTANCE_METHOD = broken_pairs_distance
-    PROBLEM_TYPE = Problem.MDVRPTW
+    PROBLEM_TYPE = Problem.AFVRP
 
     ga = GA(VRP_INSTANCE,
             POPULATION_SIZE,

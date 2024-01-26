@@ -35,7 +35,7 @@ class Graph:
 
         return graph
 
-    def save_graph(self, ):
+    def save_graph(self, file_prefix_name):
         pos = {coord: tuple(coord) for coord in self.graph.nodes}
         nx.draw(self.graph, pos, node_size=75, node_color='skyblue', font_color='black')
 
