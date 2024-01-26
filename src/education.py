@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from numpy import ndarray
 
+from src.enums import Problem
 from src.utility import set_customer_index_list
 
 
@@ -21,6 +22,11 @@ class Education:
         self.ga = ga
         self.max_visit_sequence = max_visit_sequence
         self.neighborhood_iterations = int(0.1 * self.ga.vrp_instance.n_customers)
+
+        if self.ga.problem_type == Problem.MDVRPTW:
+            self.split_depot = self.ga.split.split_single_depot
+        elif self.ga.problem_type == Problem.AFVRP:
+            self.split_depot = self.ga.split.split_single_depot_afvrp
 
     def run(self, chromosome: ndarray, current_fitness: float, limited=False) -> Tuple[ndarray, float]:
         """
@@ -90,6 +96,7 @@ class Education:
 
         best_fitness = float("inf")
         best_insert_position = None
+
         for customer in shuffle_single_depot_chromosome:
             temp = single_depot_chromosome.copy()
             # bug, give depot_i_vehicle?
@@ -106,7 +113,8 @@ class Education:
 
                 # Call split to calculate fitness and only get the total fitness return value. Last two arguments special cases
                 # using single depot split depot_i=0 and customer_offset=1 because single chromosome passed
-                fitness = self.ga.split.split_single_depot(single_depot_chromosome, 0, 1, depot_i_vehicle=depot_i)[0][-1]
+
+                fitness = self.split_depot(single_depot_chromosome, 0, 1, depot_i_vehicle=depot_i)[0][-1]
 
                 # Update the best fitness and position if needed
                 if fitness < best_fitness:

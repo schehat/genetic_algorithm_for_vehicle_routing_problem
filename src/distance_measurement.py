@@ -58,21 +58,20 @@ class EuclideanDistance:
     def __init__(self, ga: "GA"):
         self.shortest_paths_cache = {}
 
-    def euclidean_distance(self, obj1, obj2) -> float:
+    def euclidean_distance(self, a: tuple, b: tuple) -> float:
         """
         Calculate fitness for a single chromosome
         param: obj1 and obj2 - Customers or Depots
         return: distance
         """
-        obj1_cord = (obj1.x, obj1.y)
-        obj2_cord = (obj2.x, obj2.y)
-        if (obj1_cord, obj2_cord) in self.shortest_paths_cache:
-            # If the result is already cached, return it
-            return self.shortest_paths_cache[(obj1_cord, obj2_cord)]
 
-        dx = obj1.x - obj2.x
-        dy = obj1.y - obj2.y
+        if (a, b) in self.shortest_paths_cache:
+            # If the result is already cached, return it
+            return self.shortest_paths_cache[(a, b)]
+
+        dx = a[0] - b[0]
+        dy = a[1] - b[1]
         distance = (dx**2 + dy**2)**0.5
-        self.shortest_paths_cache[(obj1_cord, obj2_cord)] = distance
+        self.shortest_paths_cache[(a, b)] = distance
 
         return distance

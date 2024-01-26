@@ -51,11 +51,12 @@ class GA:
                  local_search_method,
                  distance_method,
                  instance_name,
+                 problem_type,
 
                  tournament_size: int = 2,
                  n_elite: int = 10,
-                 p_c: float = 0.75,
-                 p_m: float = 0.3,
+                 p_c: float = 0.8,
+                 p_m: float = 0.4,
 
                  penalty_step: int = 2,
                  survivor_selection_step: int = 200,
@@ -83,8 +84,9 @@ class GA:
         elif instance_name == "pr02":
             max_generations = 1000
         elif instance_name == "pr03":
-            max_generations = 1000
-        self.file_prefix_name = f"../BA_results/{instance_name}/pop={population_size}/{self.TIMESTAMP}"
+            max_generations = 600
+        self.file_prefix_name = f"../BA_results/{instance_name}/n_elite={n_elite}/{self.TIMESTAMP}"
+        self.problem_type = problem_type
         self.plotter = Plot(self)
         self.split = Split(self)
         self.education = Education(self)
@@ -537,13 +539,13 @@ class GA:
         self.n_feasible = len(feasible_indices)
 
         if self.n_feasible < self.target_feasible_proportion:
-            self.capacity_penalty_factor = min(self.capacity_penalty_factor * (1 + self.penalty_factor), 15)
-            self.duration_penalty_factor = min(self.duration_penalty_factor * (1 + self.penalty_factor), 15)
-            self.time_window_penalty = min(self.time_window_penalty * (1 + self.penalty_factor), 15)
+            self.capacity_penalty_factor = self.capacity_penalty_factor * (1 + self.penalty_factor)
+            self.duration_penalty_factor = self.duration_penalty_factor * (1 + self.penalty_factor)
+            self.time_window_penalty = self.time_window_penalty * (1 + self.penalty_factor)
         else:
-            self.capacity_penalty_factor = max(self.capacity_penalty_factor * (1 - self.penalty_factor), 2)
-            self.duration_penalty_factor = max(self.duration_penalty_factor * (1 - self.penalty_factor), 2)
-            self.time_window_penalty = max(self.time_window_penalty - (1 + self.penalty_factor), 2)
+            self.capacity_penalty_factor = self.capacity_penalty_factor * (1 - self.penalty_factor)
+            self.duration_penalty_factor = self.duration_penalty_factor * (1 - self.penalty_factor)
+            self.time_window_penalty = self.time_window_penalty * (1 + self.penalty_factor)
 
     def print_time_and_text(self, text: str):
         self.end_time = time.time()

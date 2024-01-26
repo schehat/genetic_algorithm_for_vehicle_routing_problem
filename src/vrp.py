@@ -1,5 +1,7 @@
 from numpy import ndarray
 
+from src.graph import Graph
+
 
 class Customer:
     """
@@ -36,7 +38,7 @@ class VRPInstance:
     """
 
     def __init__(self, n_vehicles: int, n_customers: int, n_depots: int, max_capacity: int,
-                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int):
+                 customers: ndarray, depots: ndarray, max_duration_of_a_route: int, graph: Graph):
         self.n_vehicles = n_vehicles
         self.n_customers = n_customers
         self.n_depots = n_depots
@@ -44,3 +46,4 @@ class VRPInstance:
         self.customers = customers
         self.depots = depots
         self.max_duration_of_a_route = max_duration_of_a_route
+        self.graph = graph

@@ -8,6 +8,8 @@ from selection import n_tournaments
 from local_search import two_opt
 from initial_population import initial_population_grouping_savings_nnh, initial_population_random
 from src.distance_measurement import broken_pairs_distance
+from src.enums import Problem
+from src.graph import Graph
 from vrp import Customer, Depot, VRPInstance
 
 
@@ -45,7 +47,14 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
             depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[-2]), int(data[-1]))
             depots[i] = depot
 
-    return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route)
+    # Create Graph
+    # Concatenate customer and depot coordinates to form the points array
+    customer_coordinates = np.array([[customer.x, customer.y] for customer in customers])
+    depot_coordinates = np.array([[depot.x, depot.y] for depot in depots])
+    points = np.concatenate((customer_coordinates, depot_coordinates), axis=0)
+    graph = Graph(points)
+
+    return VRPInstance(n_vehicles, n_customers, n_depots, max_capacity, customers, depots, max_duration_route, graph)
 
 
 if __name__ == "__main__":
@@ -53,21 +62,22 @@ if __name__ == "__main__":
     np.set_printoptions(threshold=np.inf)
 
     # Create vrp instance
-    INSTANCE_NAME = "pr03"
+    INSTANCE_NAME = "pr01"
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
 
     # Set GA parameters
     POPULATION_SIZE = 100
     CROSSOVER_RATE = 0.5
-    MUTATION_RATE = 0.5
-    MAX_GENERATIONS = 600
+    mMUTATION_RATE = 0.5
+    MAX_GENERATIONS = 1000
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
     FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH_METHOD = two_opt
     DISTANCE_METHOD = broken_pairs_distance
+    PROBPLEM_TYPE = Problem.MDVRPTW
 
     ga = GA(VRP_INSTANCE,
             POPULATION_SIZE,
@@ -77,6 +87,7 @@ if __name__ == "__main__":
             SELECTION_METHOD,
             LOCAL_SEARCH_METHOD,
             DISTANCE_METHOD,
-            INSTANCE_NAME)
+            INSTANCE_NAME,
+            PROBPLEM_TYPE)
 
     ga.run()

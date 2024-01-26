@@ -3,6 +3,8 @@ import random
 import numpy as np
 from numpy import ndarray
 
+from src.enums import Problem
+
 
 def initial_population_random(ga: "GA", start_pos: int, end_pos):
     """
@@ -122,9 +124,23 @@ def wright_clark_savings(ga: "GA", depot_customer_order: np.ndarray, routing_res
                 customer_i = ga.vrp_instance.customers[customer_i_id - 1]
                 customer_j = ga.vrp_instance.customers[customer_j_id - 1]
 
-                distance_d_i = ga.euclidean_distance.euclidean_distance(depot, customer_i)
-                distance_d_j = ga.euclidean_distance.euclidean_distance(depot, customer_j)
-                distance_i_j = ga.euclidean_distance.euclidean_distance(customer_i, customer_j)
+                distance_d_i, distance_d_j, distance_i_j = 0, 0, 0
+
+                if ga.problem_type == Problem.MDVRPTW:
+                    distance_d_i = ga.euclidean_distance.euclidean_distance((depot.x, depot.y),
+                                                                            (customer_i.x, customer_i.y))
+                    distance_d_j = ga.euclidean_distance.euclidean_distance((depot.x, depot.y),
+                                                                            (customer_j.x, customer_j.y))
+                    distance_i_j = ga.euclidean_distance.euclidean_distance((depot.x, depot.y),
+                                                                            (customer_j.x, customer_j.y))
+                elif ga.problem_type == Problem.AFVRP:
+                    distance_d_i = ga.vrp_instance.graph.shortest_path_between_two_nodes((depot.x, depot.y),
+                                                                                         (customer_i.x, customer_i.y))
+                    distance_d_j = ga.vrp_instance.graph.shortest_path_between_two_nodes((depot.x, depot.y),
+                                                                                         (customer_j.x, customer_j.y))
+                    distance_i_j = ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y),
+                                                                                         (customer_j.x, customer_j.y))
+
                 saving = distance_d_i + distance_d_j - distance_i_j
 
                 # Update savings_list
@@ -217,10 +233,23 @@ def nearest_neighbor_heuristic(ga: "GA", routing_result: list):
                 while route:
                     # Find the nearest neighbor to the last customer in the new route
                     last_customer = new_route[-1]
-                    nearest_neighbor = min(route, key=lambda customer_id: ga.euclidean_distance.euclidean_distance(
-                        ga.vrp_instance.customers[last_customer - 1],
-                        ga.vrp_instance.customers[customer_id - 1],
-                    ))
+                    nearest_neighbor = None
+
+                    if ga.problem_type == Problem.MDVRPTW:
+                        nearest_neighbor = min(route, key=lambda customer_id: ga.euclidean_distance.euclidean_distance(
+                            (ga.vrp_instance.customers[last_customer - 1].x,
+                             ga.vrp_instance.customers[last_customer - 1].y),
+                            (
+                            ga.vrp_instance.customers[customer_id - 1].x, ga.vrp_instance.customers[customer_id - 1].y),
+                        ))
+                    elif ga.problem_type == Problem.AFVRP:
+                        nearest_neighbor = min(route, key=lambda
+                            customer_id: ga.vrp_instance.graph.shortest_path_between_two_nodes(
+                            (ga.vrp_instance.customers[last_customer - 1].x,
+                             ga.vrp_instance.customers[last_customer - 1].y),
+                            (ga.vrp_instance.customers[customer_id - 1].x, ga.vrp_instance.customers[customer_id - 1].y)
+                        ))
+
                     new_route.append(nearest_neighbor)
                     route.remove(nearest_neighbor)
 
