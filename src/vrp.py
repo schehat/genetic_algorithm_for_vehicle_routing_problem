@@ -9,7 +9,7 @@ class Customer:
     """
 
     def __init__(self, id: int, x: float, y: float, service_duration: int, demand: int,
-                 start_time_window: int, end_time_window: int, label: int = 0):
+                 start_time_window: int, end_time_window: int, label: int = 0, equipment: int = 0):
         self.id = id
         self.x = x
         self.y = y
@@ -18,6 +18,7 @@ class Customer:
         self.start_time_window = start_time_window
         self.end_time_window = end_time_window
         self.label = label
+        self.equipment = equipment
 
 
 class Depot:

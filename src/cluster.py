@@ -39,43 +39,6 @@ class Cluster:
         plt.legend()
         plt.show()
 
-    def adjust_benchmark_with_cluster(self):
-        print(self.k_means.cluster_centers_)
-        print(self.k_means.labels_)
-
-        # Define the input and output file paths
-        input_file_path = self.file_path
-        output_file_path = self.file_path + "_afvrp"
-
-        # Open the input file for reading
-        with open(input_file_path, 'r') as input_file:
-            # Read all lines from the input file
-            lines = input_file.readlines()
-
-        # Open the output file for writing
-        with open(output_file_path, 'w') as output_file:
-            for i, line in enumerate(lines):
-                # Skip the lines
-                if i < self.n_depots + 1:
-                    output_file.write(line)
-                else:
-                    # Strip any leading/trailing whitespaces, add '1', and write the modified line
-                    modified_line = line.strip() + f' {self.k_means.labels_[i - (self.n_depots + 1)]}\n'
-                    output_file.write(modified_line)
-
-        # Read the first element of the last line
-        with open(output_file_path, 'r') as file:
-            lines = file.readlines()
-            if lines:
-                last_line = lines[-1]
-                last_line_first_element = last_line.split()[0]
-                next_line_number = int(last_line_first_element) + 1
-
-        with open(output_file_path, 'a') as output_file:
-            for i in range(self.k):
-                label_line = f'{next_line_number + i} {self.k_means.cluster_centers_[i][0]} {self.k_means.cluster_centers_[i][1]}\n'
-                output_file.writelines(label_line)
-
     def get_centroid(self):
         return self.k_means.cluster_centers_
 
