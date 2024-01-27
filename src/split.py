@@ -208,7 +208,7 @@ class Split:
                     # Distance from customer_i to depot or closest charging station to recharge
                     distance_to_recharge, charging_x, charging_y = self.determine_closest_charging_point(customer_i, vehicle_i_depot)
 
-                    # Check if trip to depot or charging station is not in reach or equipment violation
+                    # Check if trip to depot or charging station is not in reach and no equipment violation
                     if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges and customer_pre_i.equipment == customer_i.equipment:
                         distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (charging_x, charging_y))
                         distance_charging_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((charging_x, charging_y), (customer_i.x, customer_i.y))
@@ -298,7 +298,7 @@ class Split:
         duration_list = [0] * (depot_i_n_customers + 1)
 
         t_charging_or_equipment_switch = 2
-        t_clean_vehicles = 2
+        t_clean_vehicle = 2
 
         for t in range(depot_i_n_customers):
             distance = 0
@@ -343,7 +343,7 @@ class Split:
                     distance_recharge_to_depot, depot_x, depot_y, distance_to_recharge, charging_x, charging_y = self.determine_closest_depot_and_charging_stations(customer_i)
 
                     # Check if trip to depot or charging station is not in reach or equipment violation
-                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges and customer_pre_i.equipment == customer_i.equipment:
+                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges and customer_pre_i.equipment == customer_i.equipment and customer_pre_i.label == customer_i.label:
                         distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (charging_x, charging_y))
                         distance_charging_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((charging_x, charging_y), (customer_i.x, customer_i.y))
                         distance_to_customer = distance_customer_pre_to_charging + distance_charging_to_customer
@@ -354,19 +354,19 @@ class Split:
                             if charging_x == depot.x and charging_y == depot.y:
                                 current_capacity = 0
                     elif customer_pre_i.equipment != customer_i.equipment or customer_pre_i.label != customer_i.label:
-                        distance_customer_pre_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (distance_recharge_to_depot.x, distance_recharge_to_depot.y))
-                        distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((distance_recharge_to_depot.x, distance_recharge_to_depot.y), (customer_i.x, customer_i.y))
+                        distance_customer_pre_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (depot_x, depot_y))
+                        distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((depot_x, depot_y), (customer_i.x, customer_i.y))
                         distance_to_customer = distance_customer_pre_to_depot + distance_depot_to_customer
                         distance += distance_to_customer
-                        if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges:
+                        if (distance + distance_to_customer + distance_recharge_to_depot) // self.ga.vrp_instance.max_distance != number_of_recharges:
                             number_of_recharges += 1
                         if customer_pre_i.equipment != customer_i.equipment:
                             time_i += t_charging_or_equipment_switch
                         if customer_pre_i.label != customer_i.label:
-                            time_i += t_clean_vehicles
+                            time_i += t_clean_vehicle
                         current_capacity = 0
                     else:
-                        # Does not need charging and has correct equipment
+                        # Does not need charging and has correct equipment and is in same cluster as customer_pre
                         distance += distance_to_customer
 
                     # Late arrival => time warp
