@@ -62,11 +62,11 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
         graph = Graph(points)
 
         # Update Benchmark with AFVRP data
-        # k = n_depots
-        # cluster = Cluster(points, k, n_depots, file_path)
-        # cluster.plot_clusters()
-        # n_equipments = 4
-        # update_benchmark_afvrp(cluster.k_means, k, n_depots, n_equipments, file_path)
+        k = n_depots
+        cluster = Cluster(points, k, n_depots, file_path)
+        cluster.plot_clusters()
+        n_equipments = 4
+        update_benchmark_afvrp(cluster.k_means, k, n_depots, n_equipments, file_path)
 
     else:
         # Read customer data

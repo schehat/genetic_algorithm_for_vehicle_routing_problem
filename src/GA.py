@@ -79,13 +79,13 @@ class GA:
         self.population_size = population_size
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
-        if instance_name == "pr01":
+        if instance_name == "pr01" or instance_name == "pr01_afvrp":
             max_generations = 1000
-        elif instance_name == "pr02":
+        elif instance_name == "pr02" or instance_name == "pr02_afvrp":
             max_generations = 1000
-        elif instance_name == "pr03":
+        elif instance_name == "pr03" or instance_name == "pr03_afvrp":
             max_generations = 600
-        self.file_prefix_name = f"../BA_results/{instance_name}/n_elite={n_elite}/{self.TIMESTAMP}"
+        self.file_prefix_name = f"../BA_results/{instance_name}/{self.TIMESTAMP}"
         self.problem_type = problem_type
         self.plotter = Plot(self)
         self.split = Split(self)

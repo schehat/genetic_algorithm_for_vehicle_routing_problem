@@ -173,7 +173,6 @@ class Split:
             sum_time_warp = 0
 
             number_of_recharges = 0
-            current_equipment = None
 
             i = t + 1
 
@@ -202,21 +201,28 @@ class Split:
 
                     distance_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (customer_i.x, customer_i.y))
 
-                    current_capacity, distance_to_recharge = self.determine_clostest_charging_point(customer_i, vehicle_i_depot, current_capacity)
+                    # if current capacity == 0 then went to depot else charging station
+                    distance_to_recharge, charging_x, charging_y = self.determine_closest_charging_point(customer_i, vehicle_i_depot, current_capacity)
 
-                    # Check if trip to depot or charging station is in reach
-                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges:
-                        distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (vehicle_i_depot.x, vehicle_i_depot.y))
-                        distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((vehicle_i_depot.x, vehicle_i_depot.y), (customer_i.x, customer_i.y))
-                        distance += distance_customer_pre_to_charging + distance_depot_to_customer
+                    # Check if trip to depot or charging station is not in reach or equipment violation
+                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges or customer_pre_i.equipment == customer_i.equipment:
+                        distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (charging_x, charging_y))
+                        distance_charging_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((charging_x, charging_y), (customer_i.x, customer_i.y))
+                        distance_to_customer = distance_customer_pre_to_charging + distance_charging_to_customer
+                        distance += distance_to_customer
                         number_of_recharges += 1
                         time_i += 2
-                    # Check if equipment is correct
+                        if charging_x == vehicle_i_depot.x and charging_y == vehicle_i_depot.y:
+                            current_capacity = 0
                     elif customer_pre_i.equipment != customer_i.equipment:
-                        distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (vehicle_i_depot.x, vehicle_i_depot.y))
+                        distance_customer_pre_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_pre_i.x, customer_pre_i.y), (vehicle_i_depot.x, vehicle_i_depot.y))
                         distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((vehicle_i_depot.x, vehicle_i_depot.y), (customer_i.x, customer_i.y))
-                        distance += distance_customer_pre_to_charging + distance_depot_to_customer
+                        distance_to_customer = distance_customer_pre_to_depot + distance_depot_to_customer
+                        distance += distance_to_customer
+                        if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges:
+                            number_of_recharges += 1
                         time_i += 2
+                        current_capacity = 0
                     else:
                         # Does not need charging and correct equipment
                         distance += distance_to_customer
@@ -267,19 +273,16 @@ class Split:
 
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
 
-    def determine_clostest_charging_point(self, customer_i, vehicle_i_depot, current_capacity):
+    def determine_closest_charging_point(self, customer_i, vehicle_i_depot, current_capacity):
         # Check if depot is in reach of charging
         distance_to_recharge = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (vehicle_i_depot.x, vehicle_i_depot.y))
-        # Save and reset Capacity
-        temp_current_capacity = current_capacity
-        current_capacity = 0
+        charging_x, charging_y = vehicle_i_depot.x, vehicle_i_depot.y
         # Check if charging station is closer than depot
         for charging_station in self.ga.vrp_instance.charging_stations:
             distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
             if distance_to_charging_station < distance_to_recharge:
                 distance_to_recharge = distance_to_charging_station
-                # If one charging station has less distance than depot then capacity will be set back to normal
-                current_capacity = temp_current_capacity
+                charging_x, charging_y = charging_station.x, charging_station.y
 
-        return current_capacity, distance_to_recharge
+        return distance_to_recharge, charging_x, charging_y
 
