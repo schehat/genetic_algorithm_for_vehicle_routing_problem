@@ -27,6 +27,8 @@ class Education:
             self.split_depot = self.ga.split.split_single_depot
         elif self.ga.problem_type == Problem.AFVRP:
             self.split_depot = self.ga.split.split_single_depot_afvrp
+        else:
+            self.split_depot = self.ga.split.split_single_depot_afvrp_with_cooperation
 
     def run(self, chromosome: ndarray, current_fitness: float, limited=False) -> Tuple[ndarray, float]:
         """

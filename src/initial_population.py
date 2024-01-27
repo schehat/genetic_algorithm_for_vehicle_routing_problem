@@ -133,7 +133,8 @@ def wright_clark_savings(ga: "GA", depot_customer_order: np.ndarray, routing_res
                                                                             (customer_j.x, customer_j.y))
                     distance_i_j = ga.euclidean_distance.euclidean_distance((depot.x, depot.y),
                                                                             (customer_j.x, customer_j.y))
-                elif ga.problem_type == Problem.AFVRP:
+                else:
+                    # For AFVRP and AFVRP with cooperation the same
                     distance_d_i = ga.vrp_instance.graph.shortest_path_between_two_nodes((depot.x, depot.y),
                                                                                          (customer_i.x, customer_i.y))
                     distance_d_j = ga.vrp_instance.graph.shortest_path_between_two_nodes((depot.x, depot.y),
@@ -242,7 +243,8 @@ def nearest_neighbor_heuristic(ga: "GA", routing_result: list):
                             (
                             ga.vrp_instance.customers[customer_id - 1].x, ga.vrp_instance.customers[customer_id - 1].y),
                         ))
-                    elif ga.problem_type == Problem.AFVRP:
+                    else:
+                        # For AFVRP and AFVRP with cooperation the same
                         nearest_neighbor = min(route, key=lambda
                             customer_id: ga.vrp_instance.graph.shortest_path_between_two_nodes(
                             (ga.vrp_instance.customers[last_customer - 1].x,

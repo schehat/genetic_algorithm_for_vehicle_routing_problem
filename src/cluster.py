@@ -23,7 +23,7 @@ class Cluster:
         depot_points = self.points[-self.k:]
 
         # Plot the customer positions with circle markers and colors based on cluster labels
-        plt.scatter(customer_points[:, 0], customer_points[:, 1], c=labels[:-self.k], cmap='viridis', label='Customers',
+        plt.scatter(customer_points[:, 0], customer_points[:, 1], c=labels[:-self.k], cmap='viridis', label='Aufgaben',
                     marker='o')
 
         # Plot the depot positions with bigger circles, black edge, and colors based on cluster labels
@@ -31,9 +31,9 @@ class Cluster:
                     marker='o', s=100, edgecolors='black')
 
         # Plot the cluster centers with red 'X' markers
-        plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='X', label='Cluster Centers')
+        plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='X', label='Cluster Zentrum')
 
-        plt.title('Customer and Depot Clustering with K-Means')
+        plt.title('Aufgaben und Depot Clustering mit K-Means')
         plt.xlabel('X Koordinaten')
         plt.ylabel('Y Koordinaten')
         plt.legend()
