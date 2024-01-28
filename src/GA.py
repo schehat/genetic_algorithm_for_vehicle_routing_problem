@@ -52,6 +52,7 @@ class GA:
                  distance_method,
                  instance_name,
                  problem_type,
+                 hybrid: bool = False,
 
                  tournament_size: int = 2,
                  n_elite: int = 10,
@@ -85,7 +86,16 @@ class GA:
             max_generations = 1000
         elif instance_name == "pr03" or instance_name == "pr03_afvrp":
             max_generations = 600
-        self.file_prefix_name = f"../BA_results/{instance_name}/{self.TIMESTAMP}"
+
+        if hybrid:
+            if instance_name == "pr01" or instance_name == "pr01_afvrp":
+                max_generations = 175
+            elif instance_name == "pr02" or instance_name == "pr02_afvrp":
+                max_generations = 50
+            else:
+                max_generations = 15
+
+        self.file_prefix_name = f"../BA_results/{instance_name}_hybrid_ls/{self.TIMESTAMP}"
         self.problem_type = problem_type
         self.plotter = Plot(self)
         self.split = Split(self)
@@ -183,7 +193,7 @@ class GA:
 
         old_best_solution = self.best_solution
         print(f"best solution before local search {self.best_solution['fitness']}")
-        # self.local_search_method(self, self.best_solution)
+        self.local_search_method(self, self.best_solution)
         self.end_time = time.time()
 
         # Need to decode again to log chromosome correctly after local search
@@ -261,7 +271,7 @@ class GA:
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
             # self.diversity_management.calculate_biased_fitness()
-            # best_ind = self.education_best_individuals()
+            best_ind = self.education_best_individuals()
 
             # Track number of no improvements
             self.save_fitness_statistics()
@@ -274,8 +284,10 @@ class GA:
             # elif (self.generation + 1) % self.kill_clone_step == 0:
             #     self.diversity_management.kill_clones()
 
-            # self.do_elitism(np.array([best_ind]))
-            best_ind = self.population[np.argsort(self.population["fitness"])[0]]
+            # One of these lines
+            self.do_elitism(np.array([best_ind]))
+            # best_ind = self.population[np.argsort(self.population["fitness"])[0]]
+
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
                 self.fitness_stats[self.generation]["min"] = best_ind["fitness"]
                 if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (best_ind["duration_violation"]) == 0:

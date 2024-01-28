@@ -9,4 +9,4 @@ class Purpose(Enum):
 class Problem(Enum):
     MDVRPTW = 1
     AFVRP = 2
-    AVFVRP_WITH_COOPERATION = 3
+    AFVRP_WITH_COOPERATION = 3
