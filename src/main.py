@@ -125,7 +125,7 @@ if __name__ == "__main__":
     PROBLEM_TYPE = Problem.MDVRPTW
 
     # Set GA parameters
-    POPULATION_SIZE = 50
+    POPULATION_SIZE = 100
     MAX_GENERATIONS = 1000
     INITIAL_POPULATION = initial_population_grouping_savings_nnh
     # INITIAL_POPULATION = initial_population_random
