@@ -146,3 +146,55 @@
 #                     break
 #
 #         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
+
+    # def get_closest_charging_point(self, customer_i, vehicle_i_depot):
+    #     # Check if depot is in reach of charging
+    #     distance_to_recharge = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y),
+    #                                                                                       (vehicle_i_depot.x,
+    #                                                                                        vehicle_i_depot.y))
+    #     charging_x, charging_y = vehicle_i_depot.x, vehicle_i_depot.y
+    #     # Check if charging station is closer than depot
+    #     for charging_station in self.ga.vrp_instance.charging_stations:
+    #         distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+    #             (customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
+    #         if distance_to_charging_station < distance_to_recharge:
+    #             distance_to_recharge = distance_to_charging_station
+    #             charging_x, charging_y = charging_station.x, charging_station.y
+    #
+    #     return distance_to_recharge, charging_x, charging_y
+    #
+    # def get_closest_depot_and_charging_stations(self, customer_i):
+    #     if customer_i in self.closest_depot_and_charging_stations:
+    #         # If the result is already cached, return it
+    #         return self.closest_depot_and_charging_stations[customer_i]
+    #
+    #     # set distance to first depot
+    #     first_depot = self.ga.vrp_instance.depots[0]
+    #     distance_recharge_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+    #         (customer_i.x, customer_i.y), (first_depot.x, first_depot.y))
+    #     depot_x, depot_y = first_depot.x, first_depot.y
+    #
+    #     # iterate trough rest of depot
+    #     for depot in self.ga.vrp_instance.depots[1:]:
+    #         distance_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+    #             (customer_i.x, customer_i.y),
+    #             (depot.x, depot.y))
+    #         if distance_to_depot < distance_recharge_to_depot:
+    #             distance_recharge_to_depot = distance_to_depot
+    #             depot_x, depot_y = depot.x, depot.y
+    #
+    #     distance_to_recharge = distance_recharge_to_depot
+    #     charging_x, charging_y = depot_x, depot_y
+    #     # Check if charging station is closer than depot
+    #     for charging_station in self.ga.vrp_instance.charging_stations:
+    #         distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+    #             (customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
+    #         if distance_to_charging_station < distance_to_recharge:
+    #             distance_to_recharge = distance_to_charging_station
+    #             charging_x, charging_y = charging_station.x, charging_station.y
+    #
+    #     # Cache the result before returning
+    #     result = (distance_recharge_to_depot, depot_x, depot_y, distance_to_recharge, charging_x, charging_y)
+    #     self.closest_depot_and_charging_stations[customer_i] = result
+    #
+    #     return result

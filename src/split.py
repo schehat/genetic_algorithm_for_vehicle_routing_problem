@@ -15,8 +15,9 @@ class Split:
             self.split_depot = self.split_single_depot
         else:
             self.split_depot = self.split_single_depot_afvrp
-        self.closest_charging_point = {}
-        self.closest_depot_and_charging_stations = {}
+        self.map_closest_depot_and_charging_stations = {}
+        self.map_get_closest_depot = {}
+        self.map_get_closest_charging_stations = {}
 
     def split(self, chromosome: ndarray, ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray, ndarray, ndarray]:
         # Determine indices for chromosome "splitting"
@@ -152,7 +153,7 @@ class Split:
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
 
     def split_single_depot_afvrp(self, chromosome: ndarray, depot_i: int, customer_offset: int,
-                                                  depot_i_vehicle=-1) -> Tuple[
+                                 depot_i_vehicle=-1) -> Tuple[
         list, list, list, list, list, list, list]:
         depot_i_n_customers = chromosome[depot_i]
         if depot_i_vehicle == -1:
@@ -215,29 +216,50 @@ class Split:
                         (customer_pre_i.x, customer_pre_i.y), (customer_i.x, customer_i.y))
 
                     # Distance from customer_i to closest of all depots and closest charging station to recharge including depot. So both distance can be equal
-                    distance_recharge_to_depot, depot_x, depot_y, distance_to_recharge, charging_x, charging_y = self.get_closest_depot_and_charging_stations(
+                    distance_recharge_to_depot, depot_x, depot_y = self.get_closest_depot(customer_i)
+                    distance_to_charging_station, charging_station_x, charging_station_y = self.get_closest_charging_stations(
                         customer_i)
+                    if distance_recharge_to_depot <= distance_to_charging_station:
+                        distance_to_recharge, charging_x, charging_y = distance_recharge_to_depot, depot_x, depot_y
+                    else:
+                        distance_to_recharge, charging_x, charging_y = distance_to_charging_station, charging_station_x, charging_station_y
 
                     # Check if trip to depot or charging station is not in reach or equipment violation
-                    if (distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges and customer_pre_i.equipment == customer_i.equipment and customer_pre_i.label == customer_i.label:
+                    if (
+                            distance + distance_to_customer + distance_to_recharge) // self.ga.vrp_instance.max_distance != number_of_recharges and customer_pre_i.equipment == customer_i.equipment and customer_pre_i.label == customer_i.label:
+                        # Distance when driving to nearest charging point from customer_i
                         distance_customer_pre_to_charging = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
                             (customer_pre_i.x, customer_pre_i.y), (charging_x, charging_y))
-                        distance_charging_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
-                            (charging_x, charging_y), (customer_i.x, customer_i.y))
+                        distance_charging_to_customer = distance_to_recharge
                         distance_to_customer = distance_customer_pre_to_charging + distance_charging_to_customer
-                        distance += distance_to_customer
+
+                        pre_distance_to_recharge, pre_charging_x, pre_charging_y = self.get_min_depot_or_charging_station_from_a_node(
+                            customer_pre_i)
+                        pre_distance_customer_pre_to_charging = pre_distance_to_recharge
+                        pre_distance_charging_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+                            (pre_charging_x, pre_charging_y), (customer_i.x, customer_i.y))
+                        pre_distance_to_customer = pre_distance_customer_pre_to_charging + pre_distance_charging_to_customer
+
+                        distance += min(distance_to_customer, pre_distance_to_customer)
                         number_of_recharges += 1
                         time_i += t_charging_or_equipment_switch
-                        for depot in self.ga.vrp_instance.depots:
-                            if charging_x == depot.x and charging_y == depot.y:
-                                current_capacity = 0
+                        if distance_to_recharge == distance_recharge_to_depot:
+                            current_capacity = 0
+
                     elif customer_pre_i.equipment != customer_i.equipment or customer_pre_i.label != customer_i.label:
                         distance_customer_pre_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
                             (customer_pre_i.x, customer_pre_i.y), (depot_x, depot_y))
                         distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
                             (depot_x, depot_y), (customer_i.x, customer_i.y))
                         distance_to_customer = distance_customer_pre_to_depot + distance_depot_to_customer
-                        distance += distance_to_customer
+
+                        pre_distance_to_depot, pre_depot_x, pre_depot_y = self.get_closest_depot(customer_pre_i)
+                        pre_distance_customer_pre_to_depot = pre_distance_to_depot
+                        pre_distance_depot_to_customer = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+                            (pre_depot_x, pre_depot_y), (customer_i.x, customer_i.y))
+                        pre_distance_to_customer = pre_distance_customer_pre_to_depot + pre_distance_depot_to_customer
+
+                        distance += min(distance_to_customer, pre_distance_to_customer)
                         if (
                                 distance + distance_to_customer + distance_recharge_to_depot) // self.ga.vrp_instance.max_distance != number_of_recharges:
                             number_of_recharges += 1
@@ -300,26 +322,10 @@ class Split:
 
         return p1, pred, distance_list, capacity_list, time_list, time_warp_list, duration_list
 
-    def get_closest_charging_point(self, customer_i, vehicle_i_depot):
-        # Check if depot is in reach of charging
-        distance_to_recharge = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y),
-                                                                                          (vehicle_i_depot.x,
-                                                                                           vehicle_i_depot.y))
-        charging_x, charging_y = vehicle_i_depot.x, vehicle_i_depot.y
-        # Check if charging station is closer than depot
-        for charging_station in self.ga.vrp_instance.charging_stations:
-            distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
-                (customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
-            if distance_to_charging_station < distance_to_recharge:
-                distance_to_recharge = distance_to_charging_station
-                charging_x, charging_y = charging_station.x, charging_station.y
-
-        return distance_to_recharge, charging_x, charging_y
-
-    def get_closest_depot_and_charging_stations(self, customer_i):
-        if customer_i in self.closest_depot_and_charging_stations:
+    def get_closest_depot(self, customer_i):
+        if customer_i in self.map_get_closest_depot:
             # If the result is already cached, return it
-            return self.closest_depot_and_charging_stations[customer_i]
+            return self.map_get_closest_depot[customer_i]
 
         # set distance to first depot
         first_depot = self.ga.vrp_instance.depots[0]
@@ -329,62 +335,47 @@ class Split:
 
         # iterate trough rest of depot
         for depot in self.ga.vrp_instance.depots[1:]:
-            distance_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
-                (customer_i.x, customer_i.y),
-                (depot.x, depot.y))
+            distance_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y),
+                                                                                           (depot.x, depot.y))
             if distance_to_depot < distance_recharge_to_depot:
                 distance_recharge_to_depot = distance_to_depot
                 depot_x, depot_y = depot.x, depot.y
 
-        distance_to_recharge = distance_recharge_to_depot
-        charging_x, charging_y = depot_x, depot_y
-        # Check if charging station is closer than depot
-        for charging_station in self.ga.vrp_instance.charging_stations:
-            distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
-                (customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
-            if distance_to_charging_station < distance_to_recharge:
-                distance_to_recharge = distance_to_charging_station
-                charging_x, charging_y = charging_station.x, charging_station.y
-
         # Cache the result before returning
-        result = (distance_recharge_to_depot, depot_x, depot_y, distance_to_recharge, charging_x, charging_y)
-        self.closest_depot_and_charging_stations[customer_i] = result
+        result = (distance_recharge_to_depot, depot_x, depot_y)
+        self.map_get_closest_depot[customer_i] = result
 
         return result
 
-    def get_closest_depot(self, customer_i):
-        # set distance to first depot
-        first_depot = self.ga.vrp_instance.depots[0]
-        distance_recharge_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (first_depot.x, first_depot.y))
-        depot_x, depot_y = first_depot.x, first_depot.y
-
-        # iterate trough rest of depot
-        for depot in self.ga.vrp_instance.depots[1:]:
-            distance_to_depot = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (depot.x, depot.y))
-            if distance_to_depot < distance_recharge_to_depot:
-                distance_recharge_to_depot = distance_to_depot
-                depot_x, depot_y = depot.x, depot.y
-
-        return distance_recharge_to_depot, depot_x, depot_y
-
     def get_closest_charging_stations(self, customer_i):
+        if customer_i in self.map_get_closest_charging_stations:
+            # If the result is already cached, return it
+            return self.map_get_closest_charging_stations[customer_i]
+
         # set distance to first depot
         first_charging_station = self.ga.vrp_instance.charging_stations[0]
-        distance_to_recharge_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (first_charging_station.x, first_charging_station.y))
+        distance_to_recharge_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+            (customer_i.x, customer_i.y), (first_charging_station.x, first_charging_station.y))
         charging_x, charging_y = first_charging_station.x, first_charging_station.y
 
         # Check if charging station is closer than depot
         for charging_station in self.ga.vrp_instance.charging_stations:
-            distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes((customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
+            distance_to_charging_station = self.ga.vrp_instance.graph.shortest_path_between_two_nodes(
+                (customer_i.x, customer_i.y), (charging_station.x, charging_station.y))
             if distance_to_charging_station < distance_to_recharge_station:
                 distance_to_recharge_station = distance_to_charging_station
                 charging_x, charging_y = charging_station.x, charging_station.y
 
-        return distance_to_recharge_station, charging_x, charging_y
+        # Cache the result before returning
+        result = (distance_to_recharge_station, charging_x, charging_y)
+        self.map_get_closest_charging_stations[customer_i] = result
+
+        return result
 
     def get_min_depot_or_charging_station_from_a_node(self, customer_i):
         distance_recharge_to_depot, depot_x, depot_y = self.get_closest_depot(customer_i)
-        distance_to_charging_station, charging_station_x, charging_station_y = self.get_closest_charging_stations(customer_i)
+        distance_to_charging_station, charging_station_x, charging_station_y = self.get_closest_charging_stations(
+            customer_i)
         if distance_recharge_to_depot <= distance_to_charging_station:
             distance_to_recharge, charging_x, charging_y = distance_recharge_to_depot, depot_x, depot_y
         else:
