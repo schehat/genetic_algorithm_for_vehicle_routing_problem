@@ -60,14 +60,14 @@ class GA:
                  p_m: float = 0.4,
 
                  penalty_step: int = 2,
-                 survivor_selection_step: int = 200,
-                 p_selection_survival: float = 0.70,
+                 survivor_selection_step: int = 10,
+                 p_selection_survival: float = 0.7,
                  kill_clone_step: int = 100,
                  diversify_step: float = 300,
                  p_diversify_survival: float = 0.3,
 
                  n_closest_neighbors: int = 3,
-                 diversity_weight: float = 0.5,
+                 diversity_weight: float = 0.75,
                  capacity_penalty_factor: float = 5.0,
                  duration_penalty_factor: float = 5.0,
                  time_window_penalty: float = 5.0,
@@ -87,15 +87,15 @@ class GA:
         elif instance_name == "pr03" or instance_name == "pr03_afvrp":
             max_generations = 600
 
-        # if hybrid:
-        #     if instance_name == "pr01" or instance_name == "pr01_afvrp":
-        #         max_generations = 175
-        #     elif instance_name == "pr02" or instance_name == "pr02_afvrp":
-        #         max_generations = 50
-        #     else:
-        #         max_generations = 15
+        if hybrid:
+            if instance_name == "pr01" or instance_name == "pr01_afvrp":
+                max_generations = 150
+            elif instance_name == "pr02" or instance_name == "pr02_afvrp":
+                max_generations = 50
+            else:
+                max_generations = 15
 
-        self.file_prefix_name = f"../BA_results/{instance_name}_hybrid_initial/{self.TIMESTAMP}"
+        self.file_prefix_name = f"../BA_results/{instance_name}_hybrid_initial_ls_bf/{self.TIMESTAMP}"
         self.problem_type = problem_type
         self.plotter = Plot(self)
         self.split = Split(self)
@@ -171,10 +171,10 @@ class GA:
         Execution of FISAGALS
         """
 
-        self.initial_population(self) # heuristic
+        self.initial_population(self)  # heuristic
         # initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
-        # self.diversity_management.calculate_biased_fitness()
+        self.diversity_management.calculate_biased_fitness()
 
         # Main GA loop
         self.start_time = time.time()
@@ -270,8 +270,8 @@ class GA:
 
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
-            # self.diversity_management.calculate_biased_fitness()
-            # best_ind = self.education_best_individuals()
+            self.diversity_management.calculate_biased_fitness()
+            best_ind = self.education_best_individuals()
 
             # Track number of no improvements
             self.save_fitness_statistics()
@@ -279,15 +279,13 @@ class GA:
 
             if self.generation % self.penalty_step == 0:
                 self.adjust_penalty()
-            # if (self.generation + 1) % self.survivor_selection_step == 0:
-            #     self.diversity_management.survivor_selection()
+            if self.generation % self.survivor_selection_step == 0:
+                self.diversity_management.survivor_selection()
             # elif (self.generation + 1) % self.kill_clone_step == 0:
             #     self.diversity_management.kill_clones()
 
-            # One of these lines
-            # self.do_elitism(np.array([best_ind]))
+            self.do_elitism(np.array([best_ind]))
             best_ind = self.population[np.argsort(self.population["fitness"])[0]]
-
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
                 self.fitness_stats[self.generation]["min"] = best_ind["fitness"]
                 if (best_ind["capacity_violation"] == 0) and (best_ind["time_warp"] == 0) and (best_ind["duration_violation"]) == 0:

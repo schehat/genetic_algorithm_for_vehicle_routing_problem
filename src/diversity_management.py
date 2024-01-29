@@ -11,7 +11,6 @@ class DiversityManagement:
     def __init__(self, ga: "GA"):
         self.ga = ga
 
-    # TODO: same values same ranks?
     def calculate_biased_fitness(self):
         self.calculate_diversity_contribution()
 

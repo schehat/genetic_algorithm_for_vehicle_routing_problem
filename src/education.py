@@ -25,10 +25,8 @@ class Education:
 
         if self.ga.problem_type == Problem.MDVRPTW:
             self.split_depot = self.ga.split.split_single_depot
-        elif self.ga.problem_type == Problem.AFVRP:
-            self.split_depot = self.ga.split.split_single_depot_afvrp
         else:
-            self.split_depot = self.ga.split.split_single_depot_afvrp_with_cooperation
+            self.split_depot = self.ga.split.split_single_depot_afvrp
 
     def run(self, chromosome: ndarray, current_fitness: float, limited=False) -> Tuple[ndarray, float]:
         """
@@ -202,7 +200,7 @@ class Education:
         start_pick_depot1 = start_depot1 + np.random.randint(0, end_depot1 - start_depot1 + 1 - seq_length_depot1 + 1)
         start_pick_depot2 = start_depot2 + np.random.randint(0, end_depot2 - start_depot2 + 1 - seq_length_depot2 + 1)
 
-        # Edge case if same depot picked and ranges overlap. TODO: fix
+        # Edge case if same depot picked and ranges overlap.
         # if depot1 == depot2:
         #     # Check if the ranges from depot1 and depot2 are overlapping
         #     if start_pick_depot1 <= start_pick_depot2 < start_pick_depot1 + seq_length_depot1 \
