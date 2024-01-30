@@ -47,11 +47,12 @@ class GA:
                  max_generations: int,
                  initial_population: Callable[[any], None],  # any => GA
                  fitness_scaling: Callable[[ndarray], ndarray],
-                 selection_method: Callable[[ndarray, int], ndarray],
+                 selection_method: Callable[[ndarray, int, str], ndarray],
                  local_search_method,
                  distance_method,
                  instance_name,
                  problem_type,
+                 file_prefix_name,
                  hybrid: bool = False,
 
                  tournament_size: int = 2,
@@ -99,7 +100,7 @@ class GA:
         else:
             self.population_size = 100
 
-        self.file_prefix_name = f"../BA_results/{instance_name}_hybrid_initial_ls_bf/{self.TIMESTAMP}"
+        self.file_prefix_name = file_prefix_name
         self.problem_type = problem_type
         self.plotter = Plot(self)
         self.split = Split(self)
@@ -178,7 +179,6 @@ class GA:
         #### Changing ###
         self.initial_population(self)  # heuristic
         # initial_population_random(self, 0, self.population_size)
-
         self.fitness_evaluation()
         self.diversity_management.calculate_biased_fitness()
 
@@ -264,7 +264,8 @@ class GA:
             top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite - len(top_feasible_individuals)]
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
-            self.selection_method(self.population, self.tournament_size)
+            ### Changing ###
+            self.selection_method(self.population, self.tournament_size, "biased_fitness")
             self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
                                      dtype=int)
 

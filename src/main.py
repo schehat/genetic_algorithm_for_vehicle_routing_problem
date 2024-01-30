@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from datetime import datetime
 
 import numpy as np
 
@@ -43,7 +44,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[3]),
                                     int(data[4]), int(data[11]), int(data[12]))
                 customers[i] = customer
-                print(data[0], data[1], data[2], data[3], data[4], data[11], data[12])
+                # print(data[0], data[1], data[2], data[3], data[4], data[11], data[12])
 
         # Read depot data
         for i, line in enumerate(lines[n_depots + 1 + n_customers:n_depots + 1 + n_customers + n_depots]):
@@ -52,7 +53,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 # depot id is + n_customers offset, unfavorable in later stages of GA
                 depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[7]), int(data[8]))
                 depots[i] = depot
-                print(data[0], data[1], data[2], data[7], data[8])
+                # print(data[0], data[1], data[2], data[7], data[8])
 
         # Create Graph
         # Concatenate customer and depot coordinates to form the points array
@@ -76,7 +77,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 customer = Customer(int(data[0]), float(data[1]), float(data[2]), int(data[3]),
                                     int(data[4]), int(data[11]), int(data[12]), label=int(data[13]), equipment=int(data[14]))
                 customers[i] = customer
-                print(data[0], data[1], data[2], data[3], data[4], data[11], data[12], data[13], data[14])
+                # print(data[0], data[1], data[2], data[3], data[4], data[11], data[12], data[13], data[14])
 
         # Read depot data
         for i, line in enumerate(lines[n_depots + 1 + n_customers:n_depots + 1 + n_customers + n_depots]):
@@ -86,7 +87,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 depot = Depot(int(data[0]) - n_customers, float(data[1]), float(data[2]), int(data[7]), int(data[8]),
                               label=int(data[9]))
                 depots[i] = depot
-                print(data[0], data[1], data[2], data[7], data[8], data[9])
+                # print(data[0], data[1], data[2], data[7], data[8], data[9])
 
         # Read charging stations
         if file_path.endswith("afvrp"):
@@ -95,7 +96,7 @@ def read_cordeau_instance(file_path: str) -> VRPInstance:
                 # depot id is + n_customers offset, unfavorable in later stages of GA
                 charging_station = ChargingStation(i, float(data[1]), float(data[2]))
                 charging_stations[i] = charging_station
-                print(data[0], data[1], data[2])
+                # print(data[0], data[1], data[2])
 
         # Create Graph
         # Concatenate customer and depot coordinates to form the points array
@@ -123,6 +124,9 @@ if __name__ == "__main__":
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
     # Problem type needs to match to instance name
     PROBLEM_TYPE = Problem.MDVRPTW
+    time_stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    file_prefix_name = f"../BA_results/{INSTANCE_NAME}_hybrid_initial_ls_bf/{time_stamp}"
+    HYBRID = True
 
     # Set GA parameters
     POPULATION_SIZE = 100
@@ -144,6 +148,7 @@ if __name__ == "__main__":
             DISTANCE_METHOD,
             INSTANCE_NAME,
             PROBLEM_TYPE,
-            hybrid=True)  # !CHECK
+            file_prefix_name,
+            hybrid=HYBRID)  # !CHECK
 
     ga.run()

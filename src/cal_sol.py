@@ -2,16 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 arr = [None] * 10
-arr[0] = 1829.2427918
-arr[1] = 1834.59513516
-arr[2] = 1820.96591268
-arr[3] = 1855.13691983
-arr[4] = 1823.68322456
-arr[5] = 1875.04559593
-arr[6] = 1903.68963467
-arr[7] = 1821.18770912
-arr[8] = 1834.71661949
-arr[9] = 1881.94473922
+arr[0] = 1113.95374479
+arr[1] = 1113.95374479
+arr[2] = 1102.59266549
+arr[3] = 1108.55701674
+arr[4] = 1113.95374479
+arr[5] = 1121.05418003
+arr[6] = 1113.95374479
+arr[7] = 1107.98939354
+arr[8] = 1113.95374479
+arr[9] = 1113.95374479
 
 avg = sum(arr) / len(arr)
 print(avg)
@@ -19,7 +19,7 @@ print(avg)
 best1 = 1083.98
 best2 = 1763.07
 best3 = 2408.42
-best = best2
+best = best1
 # Prozentuale Abweichung vom Durchschnitt berechnen
 percentage_deviation = (avg - best) / best * 100
 print(percentage_deviation)

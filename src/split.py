@@ -285,12 +285,8 @@ class Split:
                     else:
                         time_i += customer_pre_i.service_duration + distance_to_customer
 
-                if i == t + 1:
-                    distance_to_depot = distance_depot_start
-                else:
-                    # distance to recharge is the same to return to the depot for the customer
-                    distance_to_depot = distance_recharge_to_depot
 
+                distance_to_depot = distance_depot_start
                 duration = distance_depot_start + time_i + sum_time_warp + customer_i.service_duration - first_start_window
                 cost = distance \
                        + self.ga.duration_penalty_factor * max(0,
