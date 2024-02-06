@@ -8,10 +8,10 @@ from numpy import ndarray
 
 from mutation import Mutation
 from enums import Purpose
-from src.distance_measurement import EuclideanDistance
+from src.distance_measurement import EuclideanDistance, broken_pairs_distance
 from src.diversity_management import DiversityManagement
 from src.education import Education
-from src.initial_population import initial_population_random
+from src.initial_population import initial_population_random, initial_population_grouping_savings_nnh
 from src.split import Split
 from vrp import Customer, Depot, VRPInstance
 from crossover import Crossover
@@ -43,11 +43,8 @@ class GA:
                  vrp_instance: VRPInstance,
                  population_size: int,
                  max_generations: int,
-                 initial_population: Callable[[any], None],  # any => GA
-                 fitness_scaling: Callable[[ndarray], ndarray],
                  selection_method: Callable[[ndarray, int, str], ndarray],
                  local_search_method,
-                 distance_method,
                  problem_type,
                  file_prefix_name,
                  hybrid,
@@ -87,8 +84,6 @@ class GA:
         self.diversity_management = DiversityManagement(self)
         self.euclidean_distance = EuclideanDistance(self)
         self.max_generations = max_generations
-        self.initial_population = initial_population
-        self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, int], ndarray] = selection_method
         self.local_search_method = local_search_method
         self.hybrid = hybrid
@@ -108,7 +103,7 @@ class GA:
 
         self.n_closest_neighbors = n_closest_neighbors
         self.diversity_weight = diversity_weight
-        self.distance_method = distance_method
+        self.distance_method = broken_pairs_distance
         self.capacity_penalty_factor = capacity_penalty_factor
         self.duration_penalty_factor = duration_penalty_factor
         self.time_window_penalty = time_window_penalty
@@ -157,7 +152,7 @@ class GA:
         """
 
         if self.hybrid:
-            self.initial_population(self)  # heuristic
+            initial_population_grouping_savings_nnh(self)
         else:
             initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
@@ -238,7 +233,6 @@ class GA:
             self.do_elitism(top_infeasible_individuals)
             self.do_elitism(top_feasible_individuals)
 
-            # self.fitness_scaling(self.population)
             self.fitness_evaluation()
 
             if self.hybrid:
@@ -575,7 +569,7 @@ class GA:
                        f'Parameters:'
                        f'\npopulation_size: {self.population_size}, max_generations: {self.max_generations}, executed generations: {self.generation}, threshold_no_improvement: {self.threshold_no_improvement}'
                        f'\ntarget feasible proportion: {self.target_feasible_proportion}'
-                       f'\nfitness_scaling: {self.fitness_scaling.__name__}, selection_method: {self.selection_method.__name__}'
+                       f'\nselection_method: {self.selection_method.__name__}'
                        f'\np_c: {self.p_c}, p_m: {self.p_m}'
                        f'\ntournament_size: {self.tournament_size}, n_elite: {self.n_elite}'
                        f'\nsurvivor_selection_step: {self.survivor_selection_step}, p_selection_survival: {self.p_selection_survival}'                       

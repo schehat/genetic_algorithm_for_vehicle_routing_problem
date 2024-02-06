@@ -135,21 +135,14 @@ if __name__ == "__main__":
     # Set GA parameters
     POPULATION_SIZE = 100
     MAX_GENERATIONS = 1000
-    INITIAL_POPULATION = initial_population_grouping_savings_nnh
-    # INITIAL_POPULATION = initial_population_random
-    FITNESS_SCALING = power_rank
     SELECTION_METHOD = n_tournaments
     LOCAL_SEARCH_METHOD = two_opt
-    DISTANCE_METHOD = broken_pairs_distance
 
     ga = GA(VRP_INSTANCE,
             POPULATION_SIZE,
             MAX_GENERATIONS,
-            INITIAL_POPULATION,
-            FITNESS_SCALING,
             SELECTION_METHOD,
             LOCAL_SEARCH_METHOD,
-            DISTANCE_METHOD,
             PROBLEM_TYPE,
             file_prefix_name,
             HYBRID)
