@@ -1,6 +1,5 @@
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor
 from random import random, shuffle
 from typing import Callable, Tuple
 
@@ -13,7 +12,6 @@ from src.distance_measurement import EuclideanDistance
 from src.diversity_management import DiversityManagement
 from src.education import Education
 from src.initial_population import initial_population_random
-from src.local_search import two_opt
 from src.split import Split
 from vrp import Customer, Depot, VRPInstance
 from crossover import Crossover
@@ -50,10 +48,9 @@ class GA:
                  selection_method: Callable[[ndarray, int, str], ndarray],
                  local_search_method,
                  distance_method,
-                 instance_name,
                  problem_type,
                  file_prefix_name,
-                 hybrid: bool = False,
+                 hybrid,
 
                  tournament_size: int = 2,
                  n_elite: int = 10,
@@ -82,24 +79,6 @@ class GA:
         self.crossover = Crossover(self.vrp_instance)
         self.mutation = Mutation(self.vrp_instance)
 
-        # For Testing Purposes
-        if instance_name == "pr01" or instance_name == "pr01_afvrp":
-            max_generations = 1000
-        elif instance_name == "pr02" or instance_name == "pr02_afvrp":
-            max_generations = 1000
-        elif instance_name == "pr03" or instance_name == "pr03_afvrp":
-            max_generations = 600
-        if hybrid:
-            if instance_name == "pr01" or instance_name == "pr01_afvrp":
-                max_generations = 150
-            elif instance_name == "pr02" or instance_name == "pr02_afvrp":
-                max_generations = 50
-            else:
-                max_generations = 15
-            self.population_size = 50
-        else:
-            self.population_size = 100
-
         self.file_prefix_name = file_prefix_name
         self.problem_type = problem_type
         self.plotter = Plot(self)
@@ -112,6 +91,7 @@ class GA:
         self.fitness_scaling: Callable[[ndarray], ndarray] = fitness_scaling
         self.selection_method: Callable[[ndarray, int], ndarray] = selection_method
         self.local_search_method = local_search_method
+        self.hybrid = hybrid
 
         self.tournament_size = tournament_size
         self.n_elite = n_elite
@@ -176,11 +156,13 @@ class GA:
         Execution of FISAGALS
         """
 
-        #### Changing ###
-        # self.initial_population(self)  # heuristic
-        initial_population_random(self, 0, self.population_size)
+        if self.hybrid:
+            self.initial_population(self)  # heuristic
+        else:
+            initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
-        # self.diversity_management.calculate_biased_fitness()
+        if self.hybrid:
+            self.diversity_management.calculate_biased_fitness()
 
         # Main GA loop
         self.start_time = time.time()
@@ -200,8 +182,8 @@ class GA:
         old_best_solution = self.best_solution
         print(f"best solution before local search {self.best_solution['fitness']}")
 
-        #### Changing ###
-        # self.local_search_method(self, self.best_solution)
+        if self.hybrid:
+            self.local_search_method(self, self.best_solution)
 
         self.end_time = time.time()
 
@@ -264,8 +246,10 @@ class GA:
             top_infeasible_individuals_i = np.argsort(infeasible_individuals["fitness"])[:self.n_elite - len(top_feasible_individuals)]
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
-            ### Changing ###
-            self.selection_method(self.population, self.tournament_size, "fitness")
+            if self.hybrid:
+                self.selection_method(self.population, self.tournament_size, "biased_fitness")
+            else:
+                self.selection_method(self.population, self.tournament_size, "fitness")
             self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
                                      dtype=int)
 
@@ -281,9 +265,9 @@ class GA:
             # self.fitness_scaling(self.population)
             self.fitness_evaluation()
 
-            #### Changing ###
-            # self.diversity_management.calculate_biased_fitness()
-            # best_ind = self.education_best_individuals()
+            if self.hybrid:
+                self.diversity_management.calculate_biased_fitness()
+                best_ind = self.education_best_individuals()
 
             # Track number of no improvements
             self.save_fitness_statistics()
@@ -292,14 +276,14 @@ class GA:
             if self.generation % self.penalty_step == 0:
                 self.adjust_penalty()
 
-            #### Changing ###
-            # if self.generation % self.survivor_selection_step == 0:
-            #     self.diversity_management.survivor_selection()
+            if self.hybrid:
+                if self.generation % self.survivor_selection_step == 0:
+                    self.diversity_management.survivor_selection()
             # elif (self.generation + 1) % self.kill_clone_step == 0:
             #     self.diversity_management.kill_clones()
 
-            #### Changing ###
-            # self.do_elitism(np.array([best_ind]))
+            if self.hybrid:
+                self.do_elitism(np.array([best_ind]))
 
             best_ind = self.population[np.argsort(self.population["fitness"])[0]]
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:

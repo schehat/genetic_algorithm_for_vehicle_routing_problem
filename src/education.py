@@ -10,7 +10,7 @@ from src.utility import set_customer_index_list
 
 class Education:
     """
-    Serves as a local search mechanism superior to random mutation
+    Serves as a local search method
     """
 
     current_fitness: float
@@ -41,17 +41,17 @@ class Education:
 
         if not limited:
             self.neighborhood_iterations = int(0.1 * self.ga.vrp_instance.n_customers)
-            self.pattern_improvement()
+            self.route_improvement()
             self.customer_index_list = set_customer_index_list(self.ga.vrp_instance.n_depots, self.current_chromosome.copy())
-            self.route_improvement(self.current_chromosome.copy())
-            self.pattern_improvement()
+            self.pattern_improvement(self.current_chromosome.copy())
+            self.route_improvement()
         else:
             self.neighborhood_iterations = int(0.3 * self.ga.vrp_instance.n_customers)
-            self.pattern_improvement()
+            self.route_improvement()
 
         return self.current_chromosome, self.current_fitness
 
-    def route_improvement(self, chromosome: ndarray):
+    def pattern_improvement(self, chromosome: ndarray):
         """
         Route improvement deals with the configuration of the customers with the route of a single depot.
         Here is the management of the all the depots held for configuring the new chromosome
@@ -132,7 +132,7 @@ class Education:
         # Remove depot information at the end
         return depot_i, single_depot_chromosome[1:], best_fitness
 
-    def pattern_improvement(self):
+    def route_improvement(self):
         """
         Pattern Improvement deals with the configuration of all customers between different depots to
         evaluate better depot assignment

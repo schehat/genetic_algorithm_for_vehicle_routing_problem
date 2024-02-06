@@ -16,11 +16,11 @@ def set_customer_index_list(n_depots: int, chromosome: ndarray) -> list:
 
 def save_plot(location: str, file_name: str):
     """
-        Saves plots at a given location
-        param: plotting - pyplot object
-        param: location - destination of file to be stored
-        param: file_name - name of file
-        """
+    Saves plots at a given location
+    param: plotting - pyplot object
+    param: location - destination of file to be stored
+    param: file_name - name of file
+    """
 
     os.makedirs(location, exist_ok=True)
     file_name = os.path.join(location, file_name)
@@ -28,6 +28,13 @@ def save_plot(location: str, file_name: str):
 
 
 def update_benchmark_afvrp(k_means, k: int, n_depots: int, n_equipment, file_path):
+    """
+    Creates AFVRP testing data by enhancing the MDVRPTW benchmark instance
+    param: k_means - K-Means data object
+    param: n_depots - number of depots
+    param: n_equipment - number of equipments for the AFVRP
+    """
+
     print(k_means.cluster_centers_)
     print(k_means.labels_)
 

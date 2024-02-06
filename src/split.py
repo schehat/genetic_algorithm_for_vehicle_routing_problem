@@ -156,6 +156,9 @@ class Split:
                                  depot_i_vehicle=-1) -> Tuple[
         list, list, list, list, list, list, list]:
         depot_i_n_customers = chromosome[depot_i]
+
+        # Special treatment to allow single split to be executed for a single depot information in Education
+        # without calling the single split method
         if depot_i_vehicle == -1:
             depot_i_vehicle = depot_i
         vehicle_i_depot: Depot = self.ga.vrp_instance.depots[depot_i_vehicle]

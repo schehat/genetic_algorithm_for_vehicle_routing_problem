@@ -118,12 +118,15 @@ if __name__ == "__main__":
     # Set the print options to control the display format
     np.set_printoptions(threshold=np.inf)
 
+    """
+    GA CONFIGURATION
+    """
     # Create vrp instance
-    INSTANCE_NAME = "pr03"
+    INSTANCE_NAME = "pr01_afvrp"
     INSTANCE_FILE_PATH = f"../benchmark/c-mdvrptw/{INSTANCE_NAME}"
     VRP_INSTANCE = read_cordeau_instance(INSTANCE_FILE_PATH)
-    # Problem type needs to match to instance name
-    PROBLEM_TYPE = Problem.MDVRPTW
+    # Problem type needs to match to instance name. For AFVRP testing instance name suffix is with _afvrp
+    PROBLEM_TYPE = Problem.AFVRP
     time_stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     file_prefix_name = f"../BA_results/{INSTANCE_NAME}_hybrid/{time_stamp}"
     HYBRID = False
@@ -146,9 +149,8 @@ if __name__ == "__main__":
             SELECTION_METHOD,
             LOCAL_SEARCH_METHOD,
             DISTANCE_METHOD,
-            INSTANCE_NAME,
             PROBLEM_TYPE,
             file_prefix_name,
-            hybrid=HYBRID)  # !CHECK
+            HYBRID)
 
     ga.run()
