@@ -129,7 +129,8 @@ if __name__ == "__main__":
     PROBLEM_TYPE = Problem.AFVRP
     time_stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     file_prefix_name = f"../BA_results/{INSTANCE_NAME}_hybrid/{time_stamp}"
-    HYBRID = False
+    # All hybrid elements active. For separate testing changes in GA necessary
+    HYBRID = True
 
     # Set GA parameters
     POPULATION_SIZE = 100

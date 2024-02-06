@@ -21,7 +21,7 @@ import datetime
 
 class GA:
     """
-    - Hybrid genetic algorithm with heuristics and local search
+    - Genetic algorithm with optional heuristics and local search
     - Chromosome representation specific integer string consisting of two parts:
         1. Number of customers for each depot
         2. The order of customers for each vehicle to serve
@@ -203,30 +203,6 @@ class GA:
         self.plotter.plot_fitness()
         self.plotter.plot_routes(self.best_solution["chromosome"])
         self.log_configuration(self.best_solution, old_best_solution, best_feasible_solution)
-
-        # BELOW TESTING
-        #
-        # self.population[0]["chromosome"] = [16, 9, 14, 9,
-        #                                     9, 42, 46, 39, 15, 25, 26, 23, 36, 32,
-        #                                     35, 44, 31, 41, 7, 37,
-        #
-        #                                     34, 10, 45, 6, 27, 3, 48, 11,
-        #                                     22,
-        #
-        #                                     28, 4, 19, 14, 1, 16,
-        #                                     13, 33, 20, 29, 8, 5, 17, 18,
-        #
-        #                                     30,
-        #                                     2, 47, 24, 12, 38, 40, 21, 43
-        #                                     ]
-        # total_fitness, total_distance, total_capacity_violation, total_time_warp, total_duration_violation = self.decode_chromosome(self.population[0]["chromosome"])
-        # self.population[0]["fitness"] = total_fitness
-        # self.population[0]["distance"] = total_distance
-        # self.population[0]["capacity_violation"] = total_capacity_violation
-        # self.population[0]["time_warp"] = total_time_warp
-        # self.population[0]["duration_violation"] = total_duration_violation
-        # print(self.population[0])
-        # self.log_configuration(self.population[0])
 
     def run_generations(self, current_generation, max_generation):
         self.generation = current_generation
