@@ -125,8 +125,8 @@ if __name__ == "__main__":
     # Problem type needs to match to instance name
     PROBLEM_TYPE = Problem.MDVRPTW
     time_stamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    file_prefix_name = f"../BA_results/{INSTANCE_NAME}_hybrid_initial_ls_bf/{time_stamp}"
-    HYBRID = True
+    file_prefix_name = f"../BA_results/{INSTANCE_NAME}_hybrid/{time_stamp}"
+    HYBRID = False
 
     # Set GA parameters
     POPULATION_SIZE = 100

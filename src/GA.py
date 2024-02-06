@@ -177,10 +177,10 @@ class GA:
         """
 
         #### Changing ###
-        self.initial_population(self)  # heuristic
-        # initial_population_random(self, 0, self.population_size)
+        # self.initial_population(self)  # heuristic
+        initial_population_random(self, 0, self.population_size)
         self.fitness_evaluation()
-        self.diversity_management.calculate_biased_fitness()
+        # self.diversity_management.calculate_biased_fitness()
 
         # Main GA loop
         self.start_time = time.time()
@@ -201,7 +201,7 @@ class GA:
         print(f"best solution before local search {self.best_solution['fitness']}")
 
         #### Changing ###
-        self.local_search_method(self, self.best_solution)
+        # self.local_search_method(self, self.best_solution)
 
         self.end_time = time.time()
 
@@ -265,7 +265,7 @@ class GA:
             top_infeasible_individuals = infeasible_individuals[top_infeasible_individuals_i]
 
             ### Changing ###
-            self.selection_method(self.population, self.tournament_size, "biased_fitness")
+            self.selection_method(self.population, self.tournament_size, "fitness")
             self.children = np.empty((self.population_size, self.vrp_instance.n_depots + self.vrp_instance.n_customers),
                                      dtype=int)
 
@@ -282,8 +282,8 @@ class GA:
             self.fitness_evaluation()
 
             #### Changing ###
-            self.diversity_management.calculate_biased_fitness()
-            best_ind = self.education_best_individuals()
+            # self.diversity_management.calculate_biased_fitness()
+            # best_ind = self.education_best_individuals()
 
             # Track number of no improvements
             self.save_fitness_statistics()
@@ -293,13 +293,13 @@ class GA:
                 self.adjust_penalty()
 
             #### Changing ###
-            if self.generation % self.survivor_selection_step == 0:
-                self.diversity_management.survivor_selection()
+            # if self.generation % self.survivor_selection_step == 0:
+            #     self.diversity_management.survivor_selection()
             # elif (self.generation + 1) % self.kill_clone_step == 0:
             #     self.diversity_management.kill_clones()
 
             #### Changing ###
-            self.do_elitism(np.array([best_ind]))
+            # self.do_elitism(np.array([best_ind]))
 
             best_ind = self.population[np.argsort(self.population["fitness"])[0]]
             if best_ind["fitness"] - 0.0001 < self.fitness_stats[self.generation]["min"]:
